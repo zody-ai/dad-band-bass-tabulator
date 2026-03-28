@@ -29,23 +29,26 @@ export function WelcomeExperience({
 }: WelcomeExperienceProps) {
   const { width } = useWindowDimensions();
   const isWide = width >= 980;
+  const isNarrow = width < 760;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <BassBackdrop variant="hero" />
+      <BassBackdrop variant={isNarrow ? 'subtle' : 'hero'} />
 
       <ScrollView
-        contentContainerStyle={styles.page}
+        contentContainerStyle={[styles.page, isNarrow && styles.pageNarrow]}
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.hero, isWide && styles.heroWide]}>
           <View style={styles.heroMain}>
-            <View style={styles.stickerRow}>
-              <BadgeSticker label="Pub Set Ready" tone="warm" />
-              <BadgeSticker label="4 Strings, No Panic" tone="cool" />
-            </View>
+            {!isNarrow ? (
+              <View style={styles.stickerRow}>
+                <BadgeSticker label="Pub Set Ready" tone="warm" />
+                <BadgeSticker label="4 Strings, No Panic" tone="cool" />
+              </View>
+            ) : null}
 
-            <View style={styles.heroCard}>
+            <View style={[styles.heroCard, isNarrow && styles.heroCardNarrow]}>
               <View style={styles.heroBadgeRow}>
                 <Text style={styles.eyebrow}>Dad Band Bass</Text>
                 <View style={styles.badgePill}>
@@ -53,8 +56,10 @@ export function WelcomeExperience({
                 </View>
               </View>
 
-              <Text style={styles.title}>Hold the low end together, even when the band doesn&apos;t.</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.title, isNarrow && styles.titleNarrow]}>
+                Hold the low end together, even when the band doesn&apos;t.
+              </Text>
+              <Text style={[styles.subtitle, isNarrow && styles.subtitleNarrow]}>
                 Keep one no-nonsense setlist, tidy up bass charts fast, and get a clean stage view for pub gigs, church runs, and Saturday dad-band rehearsals.
               </Text>
 
@@ -71,24 +76,28 @@ export function WelcomeExperience({
                 <View style={[styles.miniMeterBar, styles.miniMeterBarTall]} />
               </View>
 
-              <View style={styles.actions}>
+              <View style={[styles.actions, isNarrow && styles.actionsNarrow]}>
                 <Pressable
                   onPress={onPrimaryAction}
-                  style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    isNarrow && styles.primaryButtonNarrow,
+                    pressed && styles.pressed,
+                  ]}
                 >
                   <Text style={styles.primaryButtonLabel}>{actionLabel}</Text>
                 </Pressable>
-                <View style={styles.secondaryCallout}>
+                <View style={[styles.secondaryCallout, isNarrow && styles.secondaryCalloutNarrow]}>
                   <Text style={styles.secondaryCalloutLabel}>One setlist. Quick fixes. Big pocket energy.</Text>
                 </View>
               </View>
             </View>
           </View>
 
-          <FlatBassHero compact={!isWide} />
+          {!isNarrow ? <FlatBassHero compact={!isWide} /> : null}
         </View>
 
-        <View style={styles.featureGrid}>
+        <View style={[styles.featureGrid, isNarrow && styles.featureGridNarrow]}>
           <FeatureCard
             title="Gig Bag Library"
             description="Keep rehearsal-night staples, pub-set survivors, and last-minute fixes in one place."
@@ -185,6 +194,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 28,
   },
+  pageNarrow: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 20,
+    gap: 18,
+  },
   hero: {
     paddingTop: 8,
     maxWidth: 840,
@@ -253,6 +268,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.11,
     shadowRadius: 40,
     elevation: 8,
+  },
+  heroCardNarrow: {
+    paddingVertical: 22,
+    paddingHorizontal: 18,
+    borderRadius: 24,
+    gap: 16,
   },
   flatBassPanel: {
     flex: 0.92,
@@ -337,11 +358,21 @@ const styles = StyleSheet.create({
     color: palette.text,
     maxWidth: 720,
   },
+  titleNarrow: {
+    fontSize: 38,
+    lineHeight: 42,
+    maxWidth: undefined,
+  },
   subtitle: {
     fontSize: 20,
     lineHeight: 30,
     color: '#3f3f46',
     maxWidth: 640,
+  },
+  subtitleNarrow: {
+    fontSize: 18,
+    lineHeight: 27,
+    maxWidth: undefined,
   },
   vibeRow: {
     flexDirection: 'row',
@@ -388,6 +419,11 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 4,
   },
+  actionsNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
   primaryButton: {
     minHeight: 52,
     borderRadius: 20,
@@ -401,6 +437,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 18,
     elevation: 4,
+  },
+  primaryButtonNarrow: {
+    width: '100%',
   },
   primaryButtonLabel: {
     fontSize: 17,
@@ -421,6 +460,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(120, 53, 15, 0.1)',
   },
+  secondaryCalloutNarrow: {
+    maxWidth: undefined,
+  },
   secondaryCalloutLabel: {
     fontSize: 14,
     lineHeight: 20,
@@ -431,6 +473,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 14,
+  },
+  featureGridNarrow: {
+    flexDirection: 'column',
+    gap: 12,
   },
   featureCard: {
     flexGrow: 1,
