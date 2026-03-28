@@ -1,5 +1,6 @@
 export type RootStackParamList = {
   Landing: undefined;
+  Welcome: undefined;
   MainTabs: undefined;
   SongEditor: { songId: string };
   PerformanceView: { songId: string; sectionIndex?: number };

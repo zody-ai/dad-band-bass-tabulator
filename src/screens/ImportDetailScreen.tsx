@@ -4,6 +4,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { palette } from '../constants/colors';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 
@@ -13,7 +14,7 @@ export function ImportDetailScreen({ navigation, route }: Props) {
   const { type } = route.params;
   const { createSong } = useBassTab();
 
-  const title = type === 'image' ? 'Image Import' : 'PDF Import';
+  const title = type === 'image' ? 'Dad Band Bass Image Import' : 'Dad Band Bass PDF Import';
 
   const description =
     type === 'image'
@@ -64,6 +65,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: palette.text,
   },
   description: {

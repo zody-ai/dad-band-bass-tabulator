@@ -10,6 +10,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { SearchBar } from '../components/SearchBar';
 import { palette } from '../constants/colors';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 
@@ -25,7 +26,6 @@ export function LibraryScreen({ navigation }: Props) {
     deleteSong,
     loadStateFromFile,
     saveStateToFile,
-    storageFileUri,
   } = useBassTab();
   const [query, setQuery] = useState('');
   const [songPendingDelete, setSongPendingDelete] = useState<{
@@ -33,7 +33,7 @@ export function LibraryScreen({ navigation }: Props) {
     title: string;
   } | null>(null);
   const [fileActionMessage, setFileActionMessage] = useState(
-    `State storage: ${storageFileUri}`,
+    'Pack Away saves your charts here; Bring It Back restores that saved copy.',
   );
 
   const filteredSongs = useMemo(() => {
@@ -59,20 +59,20 @@ export function LibraryScreen({ navigation }: Props) {
   const handleSaveState = async () => {
     try {
       await saveStateToFile();
-      setFileActionMessage('State saved.');
+      setFileActionMessage('Packed away for later on this device.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save state.';
-      setFileActionMessage(`Save failed: ${message}`);
+      const message = error instanceof Error ? error.message : 'Could not pack it away.';
+      setFileActionMessage(`Could not pack it away: ${message}`);
     }
   };
 
   const handleLoadState = async () => {
     try {
       await loadStateFromFile();
-      setFileActionMessage('State restored.');
+      setFileActionMessage('Packed charts brought back onto the stand.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to restore state.';
-      setFileActionMessage(`Restore failed: ${message}`);
+      const message = error instanceof Error ? error.message : 'Could not bring it back.';
+      setFileActionMessage(`Could not bring it back: ${message}`);
     }
   };
 
@@ -87,21 +87,26 @@ export function LibraryScreen({ navigation }: Props) {
 
     deleteSong(songPendingDelete.id);
     setSongPendingDelete(null);
-    setFileActionMessage('Song deleted.');
+    setFileActionMessage('Song binned.');
   };
 
   return (
     <ScreenContainer>
       <View style={styles.header}>
         <View style={styles.headingBlock}>
-          <Text style={styles.title}>BassTab Library</Text>
+          <Text style={styles.title}>Dad Band Bass Library</Text>
           <Text style={styles.subtitle}>
-            Quick-access charts for rehearsal and stage use.
+            Keep rehearsal-night staples, pub-set survivors, and last-minute fixes ready to go.
           </Text>
         </View>
         <View style={styles.actionRow}>
-          <PrimaryButton label="Save State" onPress={handleSaveState} variant="secondary" />
-          <PrimaryButton label="Restore State" onPress={handleLoadState} variant="ghost" />
+          <PrimaryButton
+            label="About"
+            onPress={() => navigation.navigate('Welcome')}
+            variant="ghost"
+          />
+          <PrimaryButton label="Pack Away" onPress={handleSaveState} variant="secondary" />
+          <PrimaryButton label="Bring It Back" onPress={handleLoadState} variant="ghost" />
           <PrimaryButton label="New Song" onPress={handleCreateSong} />
         </View>
       </View>
@@ -135,10 +140,10 @@ export function LibraryScreen({ navigation }: Props) {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Delete song?</Text>
+            <Text style={styles.modalTitle}>Bin song?</Text>
             <Text style={styles.modalText}>
               {songPendingDelete
-                ? `Are you sure you want to delete "${songPendingDelete.title}"?`
+                ? `Are you sure you want to bin "${songPendingDelete.title}"?`
                 : ''}
             </Text>
             <View style={styles.modalActions}>
@@ -148,7 +153,7 @@ export function LibraryScreen({ navigation }: Props) {
                 variant="ghost"
               />
               <PrimaryButton
-                label="Delete"
+                label="Bin Song"
                 onPress={confirmDeleteSong}
                 variant="danger"
               />
@@ -170,11 +175,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: palette.text,
   },
   subtitle: {
     fontSize: 17,
-    color: palette.textMuted,
+    color: '#4b5563',
     lineHeight: 24,
   },
   actionRow: {

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 
 import { palette } from '../constants/colors';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { ImportDetailScreen } from '../screens/ImportDetailScreen';
 import { ImportPasteScreen } from '../screens/ImportPasteScreen';
 import { ImportScreen } from '../screens/ImportScreen';
@@ -15,6 +16,7 @@ import { SetlistExportScreen } from '../screens/SetlistExportScreen';
 import { SongExportScreen } from '../screens/SongExportScreen';
 import { SetlistScreen } from '../screens/SetlistScreen';
 import { SongEditorScreen } from '../screens/SongEditorScreen';
+import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { RootStackParamList, TabParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -89,13 +91,22 @@ export function AppNavigator() {
           contentStyle: { backgroundColor: palette.background },
           headerShadowVisible: false,
           headerStyle: { backgroundColor: palette.background },
-          headerTitleStyle: { color: palette.text, fontWeight: '700' },
+          headerTitleStyle: {
+            color: palette.text,
+            fontWeight: '700',
+            fontFamily: brandDisplayFontFamily,
+          },
         }}
       >
         <Stack.Screen
           name="Landing"
           component={LandingScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Welcome"
+          component={WelcomeScreen}
+          options={{ title: 'Dad Band Bass About' }}
         />
         <Stack.Screen
           name="MainTabs"
@@ -105,38 +116,42 @@ export function AppNavigator() {
         <Stack.Screen
           name="SongEditor"
           component={SongEditorScreen}
-          options={{ title: 'Edit Song' }}
+          options={{ title: 'Dad Band Bass Edit Song' }}
         />
         <Stack.Screen
           name="PerformanceView"
           component={LiveViewScreen}
           options={{
-            title: 'Performance View',
+            title: 'Dad Band Bass Live View',
             headerStyle: { backgroundColor: palette.liveBackground },
             headerTintColor: palette.liveText,
-            headerTitleStyle: { color: palette.liveText, fontWeight: '700' },
+            headerTitleStyle: {
+              color: palette.liveText,
+              fontWeight: '700',
+              fontFamily: brandDisplayFontFamily,
+            },
             contentStyle: { backgroundColor: palette.liveBackground },
           }}
         />
         <Stack.Screen
           name="ExportSong"
           component={SongExportScreen}
-          options={{ title: 'Export Song' }}
+          options={{ title: 'Dad Band Bass Export Song' }}
         />
         <Stack.Screen
           name="ExportSetlist"
           component={SetlistExportScreen}
-          options={{ title: 'Export Setlist' }}
+          options={{ title: 'Dad Band Bass Export Setlist' }}
         />
         <Stack.Screen
           name="ImportDetail"
           component={ImportDetailScreen}
-          options={{ title: 'Import Flow' }}
+          options={{ title: 'Dad Band Bass Import Flow' }}
         />
         <Stack.Screen
           name="ImportPaste"
           component={ImportPasteScreen}
-          options={{ title: 'Paste Tab' }}
+          options={{ title: 'Dad Band Bass Paste Tab' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

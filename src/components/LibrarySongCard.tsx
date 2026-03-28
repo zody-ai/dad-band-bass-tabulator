@@ -41,7 +41,7 @@ export function LibrarySongCard({
         <View style={styles.actions}>
           <PrimaryButton label="Edit" onPress={onEdit} variant="ghost" />
           <PrimaryButton label="Perform" onPress={onLive} variant="secondary" />
-          <PrimaryButton label="Delete" onPress={onDelete} variant="danger" />
+          <PrimaryButton label="Bin Song" onPress={onDelete} variant="danger" />
         </View>
       </View>
     </View>

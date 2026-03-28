@@ -8,6 +8,7 @@ import {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { FREE_SETLIST_TITLE } from '../constants/setlist';
 import { tuningOptions } from '../constants/tunings';
 import { seededSetlist, seededSongs } from '../data/seed';
 import { Song, SongChart, SongRow, Setlist } from '../types/models';
@@ -111,6 +112,11 @@ const isSetlist = (value: unknown): value is Setlist => {
   );
 };
 
+const normalizeSetlist = (setlist: Setlist): Setlist => ({
+  ...setlist,
+  name: FREE_SETLIST_TITLE,
+});
+
 const migrateLegacySong = (legacySong: Song | LegacySong): Song => {
   if ('rows' in legacySong && Array.isArray(legacySong.rows)) {
     return legacySong as Song;
@@ -179,10 +185,10 @@ const parseSnapshot = (rawSnapshot: string): { songs: Song[]; setlist: Setlist }
 
   return {
     songs,
-    setlist: {
+    setlist: normalizeSetlist({
       ...parsed.setlist,
       songIds: parsed.setlist.songIds.filter((songId) => knownSongIds.has(songId)),
-    },
+    }),
   };
 };
 
@@ -216,7 +222,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
         }
 
         if (parsedSetlist) {
-          setSetlist(parsedSetlist);
+          setSetlist(normalizeSetlist(parsedSetlist));
         }
       } catch (error) {
         console.warn('BassTab storage hydrate failed', error);
@@ -275,6 +281,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     setSongs((current) => current.filter((song) => song.id !== songId));
     setSetlist((current) => ({
       ...current,
+      name: FREE_SETLIST_TITLE,
       songIds: current.songIds.filter((id) => id !== songId),
       updatedAt: new Date().toISOString(),
     }));
@@ -310,6 +317,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
   const reorderSetlist = (songIds: string[]) => {
     setSetlist((current) => ({
       ...current,
+      name: FREE_SETLIST_TITLE,
       songIds,
       updatedAt: new Date().toISOString(),
     }));
@@ -330,7 +338,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     const nextState = parseSnapshot(await loadSnapshotFile());
 
     setSongs(nextState.songs);
-    setSetlist(nextState.setlist);
+    setSetlist(normalizeSetlist(nextState.setlist));
 
     return stateStorageLabel;
   };

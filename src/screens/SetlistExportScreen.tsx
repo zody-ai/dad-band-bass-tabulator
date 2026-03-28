@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TabPagePreview } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
+import { FREE_SETLIST_TITLE } from '../constants/setlist';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { Song } from '../types/models';
@@ -89,7 +91,7 @@ export function SetlistExportScreen(_: Props) {
       >
         <View style={styles.toolbar}>
           <View style={styles.toolbarCopy}>
-            <Text style={styles.toolbarTitle}>Export Setlist</Text>
+            <Text style={styles.toolbarTitle}>Dad Band Bass Export Setlist</Text>
             <Text style={styles.toolbarSubtitle}>
               Songs are rendered in set order as consecutive portrait print pages.
             </Text>
@@ -111,7 +113,7 @@ export function SetlistExportScreen(_: Props) {
 
         <View nativeID="setlist-export-print-root" style={styles.printRoot}>
         <View style={styles.setlistBanner}>
-          <Text style={styles.setlistTitle}>{setlist.name}</Text>
+          <Text style={styles.setlistTitle}>{FREE_SETLIST_TITLE}</Text>
           <Text style={styles.setlistSubtitle}>
             {orderedSongs.length} song{orderedSongs.length === 1 ? '' : 's'} in performance order
           </Text>
@@ -205,6 +207,8 @@ const styles = StyleSheet.create({
   toolbarTitle: {
     fontSize: 22,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: '#111827',
   },
   toolbarSubtitle: {
@@ -245,6 +249,8 @@ const styles = StyleSheet.create({
   setlistTitle: {
     fontSize: 24,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: '#111827',
   },
   setlistSubtitle: {

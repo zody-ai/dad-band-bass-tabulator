@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { palette } from '../constants/colors';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { createId } from '../utils/ids';
@@ -47,7 +48,7 @@ export function ImportPasteScreen({ navigation }: Props) {
   return (
     <ScreenContainer>
       <View style={styles.card}>
-        <Text style={styles.title}>Paste Tab Text</Text>
+        <Text style={styles.title}>Dad Band Bass Paste Tab</Text>
         <Text style={styles.subtitle}>
           Drop in copied tab, then turn it into an editable draft chart.
         </Text>
@@ -99,6 +100,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: palette.text,
   },
   subtitle: {

@@ -8,6 +8,8 @@ import { EmptyState } from '../components/EmptyState';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { palette } from '../constants/colors';
+import { FREE_SETLIST_TITLE } from '../constants/setlist';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { Song } from '../types/models';
@@ -59,24 +61,31 @@ export function SetlistScreen({ navigation }: Props) {
     <ScreenContainer contentStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>{setlist.name}</Text>
+          <Text style={styles.title}>{FREE_SETLIST_TITLE}</Text>
           <Text style={styles.subtitle}>
-            Build the running order, move songs up or down, and remove them when they are out.
+            The free version keeps one running order for the whole night. Move songs fast and keep the set tight.
           </Text>
         </View>
-        {orderedSongs.length > 0 ? (
+        <View style={styles.headerActions}>
           <PrimaryButton
-            label="Export Multi-Page PDF"
-            onPress={() => navigation.navigate('ExportSetlist')}
+            label="About"
+            onPress={() => navigation.navigate('Welcome')}
             variant="ghost"
           />
-        ) : null}
+          {orderedSongs.length > 0 ? (
+            <PrimaryButton
+              label="Export Multi-Page PDF"
+              onPress={() => navigation.navigate('ExportSetlist')}
+              variant="ghost"
+            />
+          ) : null}
+        </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current Order</Text>
         <Text style={styles.sectionSubtitle}>
-          Songs in the performance sequence.
+          Songs in the order the drummer will probably count in wrong.
         </Text>
 
         {orderedSongs.length === 0 ? (
@@ -136,7 +145,7 @@ export function SetlistScreen({ navigation }: Props) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Add From Library</Text>
         <Text style={styles.sectionSubtitle}>
-          Songs available to add to the setlist.
+          Pull in anything you might need before the next rehearsal detour.
         </Text>
 
         {availableSongs.length === 0 ? (
@@ -174,18 +183,25 @@ const styles = StyleSheet.create({
   header: {
     gap: 12,
   },
+  headerActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
   headerCopy: {
     gap: 6,
   },
   title: {
     fontSize: 32,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: palette.text,
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
-    color: palette.textMuted,
+    color: '#4b5563',
   },
   section: {
     gap: 12,
@@ -193,6 +209,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: palette.text,
   },
   sectionSubtitle: {

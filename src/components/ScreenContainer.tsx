@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BassBackdrop } from './BassBackdrop';
 import { palette } from '../constants/colors';
 
 interface ScreenContainerProps extends PropsWithChildren {
@@ -23,6 +24,7 @@ export function ScreenContainer({
   if (scroll) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <BassBackdrop variant="subtle" />
         <ScrollView
           contentContainerStyle={[styles.scrollContent, contentStyle]}
           keyboardShouldPersistTaps="handled"
@@ -35,6 +37,7 @@ export function ScreenContainer({
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <BassBackdrop variant="subtle" />
       <View style={[styles.staticContent, contentStyle]}>{children}</View>
     </SafeAreaView>
   );
@@ -48,6 +51,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     gap: 16,
+    flexGrow: 1,
   },
   staticContent: {
     flex: 1,

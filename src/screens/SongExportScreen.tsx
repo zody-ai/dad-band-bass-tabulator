@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TabPagePreview } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { flattenSongRowsToChart } from '../utils/songChart';
@@ -79,7 +80,7 @@ export function SongExportScreen({ route }: Props) {
       >
         <View style={styles.toolbar}>
           <View style={styles.toolbarCopy}>
-            <Text style={styles.toolbarTitle}>Export Song</Text>
+            <Text style={styles.toolbarTitle}>Dad Band Bass Export Song</Text>
             <Text style={styles.toolbarSubtitle}>
               Clean portrait layout for printing or saving to PDF.
             </Text>
@@ -167,6 +168,8 @@ const styles = StyleSheet.create({
   toolbarTitle: {
     fontSize: 22,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: '#111827',
   },
   toolbarSubtitle: {
@@ -211,6 +214,8 @@ const styles = StyleSheet.create({
   songTitle: {
     fontSize: 28,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: '#111827',
   },
   songSubtitle: {

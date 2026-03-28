@@ -1,3 +1,4 @@
+import { FREE_SETLIST_TITLE } from '../constants/setlist';
 import { Setlist, Song, SongRow } from '../types/models';
 import { parseTab } from '../utils/tabLayout';
 
@@ -95,7 +96,7 @@ export const seededSongs: Song[] = [
 
 export const seededSetlist: Setlist = {
   id: 'setlist-main',
-  name: 'Saturday Rehearsal',
+  name: FREE_SETLIST_TITLE,
   updatedAt: '2026-03-26T19:00:00.000Z',
   songIds: ['song-midnight-train', 'song-dockside', 'song-glass-river'],
 };

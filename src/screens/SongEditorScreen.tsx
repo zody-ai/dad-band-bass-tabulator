@@ -7,6 +7,7 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import { SectionEditorCard } from '../components/SectionEditorCard';
 import { SongMetaFields } from '../components/SongMetaFields';
 import { palette } from '../constants/colors';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { Song } from '../types/models';
@@ -50,7 +51,7 @@ export function SongEditorScreen({ navigation, route }: Props) {
     <ScreenContainer>
       <View style={styles.header}>
         <View style={styles.headingBlock}>
-          <Text style={styles.title}>Song Editor</Text>
+          <Text style={styles.title}>Dad Band Bass Song Editor</Text>
           <Text style={styles.subtitle}>
             Autosaves straight into the local mock store.
           </Text>
@@ -118,6 +119,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: palette.text,
   },
   subtitle: {
@@ -134,6 +137,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '700',
+    fontFamily: brandDisplayFontFamily,
+    letterSpacing: 0.2,
     color: palette.text,
   },
   sectionSubtitle: {
