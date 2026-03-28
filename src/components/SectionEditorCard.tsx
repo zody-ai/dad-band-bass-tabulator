@@ -96,6 +96,7 @@ export function SectionEditorCard({
   onDelete,
 }: SectionEditorCardProps) {
   const { width } = useWindowDimensions();
+  const isPreviewCompact = width < 760;
   const [activeRowIndex, setActiveRowIndex] = useState(-1);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [copiedBlock, setCopiedBlock] = useState<{
@@ -557,18 +558,29 @@ export function SectionEditorCard({
       {previewVisible ? (
         <View style={styles.previewOverlay}>
           <Pressable style={styles.previewBackdrop} onPress={() => setPreviewVisible(false)} />
-          <View style={styles.previewModal}>
-            <View style={styles.previewModalHeader}>
+          <View style={[styles.previewModal, isPreviewCompact && styles.previewModalCompact]}>
+            <View
+              style={[
+                styles.previewModalHeader,
+                isPreviewCompact && styles.previewModalHeaderCompact,
+              ]}
+            >
               <View style={styles.previewModalCopy}>
                 <Text style={styles.pageHeading}>Quick Preview</Text>
-                <Text style={styles.pageSubheading}>Current A4 output</Text>
+                <Text style={styles.pageSubheading}>
+                  {isPreviewCompact
+                    ? 'Scroll sideways to view the full chart'
+                    : 'Current A4 output'}
+                </Text>
               </View>
-              <PrimaryButton
-                label="Close"
-                onPress={() => setPreviewVisible(false)}
-                variant="secondary"
-                size="compact"
-              />
+              {!isPreviewCompact ? (
+                <PrimaryButton
+                  label="Close"
+                  onPress={() => setPreviewVisible(false)}
+                  variant="secondary"
+                  size="compact"
+                />
+              ) : null}
             </View>
             <ScrollView
               style={styles.previewModalScroll}
@@ -576,16 +588,33 @@ export function SectionEditorCard({
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.pageSheet}>
-                <View style={styles.pageCanvas}>
-                  <TabPagePreview
-                    stringNames={stringNames}
-                    bars={bars}
-                    rowAnnotations={rowAnnotations}
-                    rowBarCounts={rowBarCounts}
-                  />
-                </View>
+                <ScrollView
+                  horizontal
+                  nestedScrollEnabled
+                  showsHorizontalScrollIndicator={isPreviewCompact}
+                  contentContainerStyle={styles.previewCanvasScroller}
+                >
+                  <View style={[styles.pageCanvas, isPreviewCompact && styles.pageCanvasCompact]}>
+                    <TabPagePreview
+                      stringNames={stringNames}
+                      bars={bars}
+                      rowAnnotations={rowAnnotations}
+                      rowBarCounts={rowBarCounts}
+                      compact={isPreviewCompact}
+                    />
+                  </View>
+                </ScrollView>
               </View>
             </ScrollView>
+            {isPreviewCompact ? (
+              <View style={styles.previewFooterActions}>
+                <PrimaryButton
+                  label="Close Preview"
+                  onPress={() => setPreviewVisible(false)}
+                  variant="secondary"
+                />
+              </View>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -1483,11 +1512,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
+  previewModalCompact: {
+    maxHeight: '96%',
+    padding: 12,
+    gap: 10,
+  },
   previewModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
+  },
+  previewModalHeaderCompact: {
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    gap: 8,
   },
   previewModalCopy: {
     flex: 1,
@@ -1499,6 +1539,9 @@ const styles = StyleSheet.create({
   },
   previewModalScrollContent: {
     alignItems: 'center',
+  },
+  previewCanvasScroller: {
+    width: '100%',
   },
   pageCanvas: {
     width: '100%',
@@ -1518,5 +1561,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
     overflow: 'hidden',
+  },
+  pageCanvasCompact: {
+    width: undefined,
+    minWidth: 560,
+    maxWidth: undefined,
+    paddingTop: 22,
+    paddingRight: 18,
+    paddingBottom: 22,
+    paddingLeft: 18,
+  },
+  previewFooterActions: {
+    paddingTop: 4,
   },
 });
