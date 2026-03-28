@@ -41,7 +41,8 @@ interface SectionEditorCardProps {
 const beatLabels = ['1', '&', '2', '&', '3', '&', '4', '&'];
 const mobileBeatLabels = ['1', '1&', '2', '2&', '3', '3&', '4', '4&'];
 const barsPerRow = 4;
-const fretOptions = Array.from({ length: 20 }, (_value, index) => String(index));
+const baseFretOptions = Array.from({ length: 12 }, (_value, index) => String(index + 1));
+const extendedFretOptions = ['13', '14', '15', '16', '17', '18', '19', '/', '\\'];
 
 const parseAnnotationControls = (value: string) => {
   const alignMatch = value.trim().match(/^\[(left|center|right)\]\s*/i);
@@ -736,6 +737,7 @@ function RowEditor({
     slotIndex: number;
   } | null>(null);
   const [activeMobileBarIndex, setActiveMobileBarIndex] = useState(0);
+  const [showExtendedFretPad, setShowExtendedFretPad] = useState(false);
 
   useEffect(() => {
     if (!useMobileCellEditor) {
@@ -744,6 +746,7 @@ function RowEditor({
     }
 
     setActiveMobileBarIndex(0);
+    setShowExtendedFretPad(false);
     setSelectedCell({
       globalBarIndex: row.startBarIndex,
       rowBarIndex: 0,
@@ -766,16 +769,6 @@ function RowEditor({
       slotIndex: currentCell?.slotIndex ?? 0,
     }));
   }, [activeMobileBarIndex, row.startBarIndex, stringNames, useMobileCellEditor]);
-
-  useEffect(() => {
-    if (!useMobileCellEditor || !selectedCell) {
-      return;
-    }
-
-    if (selectedCell.rowBarIndex !== activeMobileBarIndex) {
-      setActiveMobileBarIndex(selectedCell.rowBarIndex);
-    }
-  }, [activeMobileBarIndex, selectedCell, useMobileCellEditor]);
 
   const clearBar = (barIndex: number) => {
     const nextBars = bars.map((bar, currentBarIndex) => {
@@ -864,11 +857,16 @@ function RowEditor({
       stringIndex: nextStringIndex,
       slotIndex: nextSlotIndex,
     });
+
+    if (useMobileCellEditor) {
+      setActiveMobileBarIndex(nextRowBarIndex);
+    }
   };
 
   const activeMobileBar = row.bars[activeMobileBarIndex];
   const activeGlobalBarIndex = row.startBarIndex + activeMobileBarIndex;
   const displayBeatLabels = useMobileCellEditor ? mobileBeatLabels : beatLabels;
+  const visibleFretOptions = showExtendedFretPad ? extendedFretOptions : baseFretOptions;
   const selectedCellValue =
     selectedCell
       ? row.bars[selectedCell.rowBarIndex]?.cells[selectedCell.stringName]?.[selectedCell.slotIndex] ?? '-'
@@ -1018,7 +1016,16 @@ function RowEditor({
             {row.bars.map((_bar, rowBarIndex) => (
               <Pressable
                 key={`${sectionId}-mobile-bar-${rowBarIndex}`}
-                onPress={() => setActiveMobileBarIndex(rowBarIndex)}
+                onPress={() => {
+                  setActiveMobileBarIndex(rowBarIndex);
+                  setSelectedCell((currentCell) => ({
+                    globalBarIndex: row.startBarIndex + rowBarIndex,
+                    rowBarIndex,
+                    stringName: currentCell?.stringName ?? stringNames[0],
+                    stringIndex: currentCell?.stringIndex ?? 0,
+                    slotIndex: currentCell?.slotIndex ?? 0,
+                  }));
+                }}
                 style={[
                   styles.mobileBarButton,
                   activeMobileBarIndex === rowBarIndex && styles.mobileBarButtonActive,
@@ -1137,9 +1144,16 @@ function RowEditor({
                   size="compact"
                   style={styles.mobilePadActionButton}
                 />
+                <PrimaryButton
+                  label={showExtendedFretPad ? '1-12' : '13+ / \\'}
+                  onPress={() => setShowExtendedFretPad((value) => !value)}
+                  variant="ghost"
+                  size="compact"
+                  style={styles.mobilePadActionButton}
+                />
               </View>
               <View style={styles.mobileFretPad}>
-                {fretOptions.map((fret) => (
+                {visibleFretOptions.map((fret) => (
                   <Pressable
                     key={`${sectionId}-fret-${fret}`}
                     onPress={() =>

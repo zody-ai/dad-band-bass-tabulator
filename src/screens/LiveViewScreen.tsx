@@ -75,8 +75,13 @@ export function LiveViewScreen({ route }: Props) {
         contentContainerStyle={[styles.contentContainer, isPhone && styles.contentContainerNarrow]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.pageSheet}>
-          <View style={[styles.pageMeta, { width: Math.min(canvasWidth, availableCanvasWidth) }]}>
+        <View style={[styles.pageSheet, isPhone && styles.pageSheetPhone]}>
+          <View
+            style={[
+              styles.pageMeta,
+              isPhone ? styles.pageMetaPhone : { width: Math.min(canvasWidth, availableCanvasWidth) },
+            ]}
+          >
             <Text style={styles.pageHeading}>Performance Chart</Text>
             <Text style={styles.pageSubheading}>
               {isPhone
@@ -91,6 +96,7 @@ export function LiveViewScreen({ route }: Props) {
             showsHorizontalScrollIndicator={isPhone || isTablet}
             contentContainerStyle={[
               styles.canvasScroller,
+              isPhone && styles.canvasScrollerPhone,
               !isPhone && styles.canvasScrollerWide,
             ]}
           >
@@ -160,9 +166,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  pageSheetPhone: {
+    alignItems: 'stretch',
+  },
   pageMeta: {
     maxWidth: '100%',
     gap: 4,
+  },
+  pageMetaPhone: {
+    width: '100%',
   },
   pageHeading: {
     fontSize: 15,
@@ -190,6 +202,10 @@ const styles = StyleSheet.create({
   },
   canvasScroller: {
     minWidth: '100%',
+  },
+  canvasScrollerPhone: {
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   canvasScrollerWide: {
     justifyContent: 'center',

@@ -1,189 +1,120 @@
-# BassTab
+# Dad Band Bass
 
-Expo-managed React Native app for bass tab editing and performance workflows.
+Dad Band Bass is an Expo / React Native app for keeping bass charts tidy, readable, and easy to use at rehearsal or on stage.
 
-## Architecture Notes
+The current free version is built around one simple workflow:
 
-The current app is small, but there are a few design choices that matter if this grows into a multi-platform product.
+- keep a local tab library
+- edit songs with the fast tab editor
+- maintain one fixed setlist called `Setlist`
+- open a performance view for stage reading
+- export song and setlist PDFs
 
-### 1. Songs are stored as sections
+Import and other extras are positioned as future `Dad Band Bass Plus` features.
 
-The source-of-truth song model is section-based:
+## Stack
 
-- each `Song` has `sections`
-- each `Section` has `name`, `notes`, `tab`, and optional row annotations
+- Expo
+- React Native
+- TypeScript
+- React Navigation
+- AsyncStorage
 
-See:
+## Current App Flow
 
-- `src/types/models.ts`
-- `src/data/seed.ts`
+The main app currently includes:
 
-### 2. The editor uses a flattened chart view
+- `Library`: local song list, state save/restore, and song creation
+- `Song Editor`: metadata editing plus the fast tab editor
+- `Setlist`: single free-version setlist flow
+- `Performance View`: dark stage-reading view
+- `About`: branded welcome / product screen
 
-The song editor does **not** edit sections one-by-one. Instead, it flattens all sections into one continuous chart for editing convenience.
+## Editing Model
 
-That behavior lives in:
+Bass tab is stored as text and transformed for editing:
 
-- `src/utils/songChart.ts`
-- `src/screens/SongEditorScreen.tsx`
+1. tab text is parsed into bars and cells
+2. the editor updates those bars and cells
+3. the chart is rendered back into tab text
 
-Important invariant:
+Key files:
 
-- the UI may flatten sections for editing
-- persisted song data must remain section-based
+- [src/components/SectionEditorCard.tsx](/home/rob/BassTab/src/components/SectionEditorCard.tsx)
+- [src/utils/tabLayout.ts](/home/rob/BassTab/src/utils/tabLayout.ts)
+- [src/utils/songChart.ts](/home/rob/BassTab/src/utils/songChart.ts)
 
-`flattenSectionsToChart(...)` is for display/editing.
+The mobile editor now uses a simpler interaction model:
 
-`mergeChartIntoSections(...)` writes the edited chart back into the original section structure.
+- select one bar at a time
+- tap a cell to target it
+- enter fret values using fret buttons instead of typing into tiny inputs
 
-If you change the editor later, protect that invariant. Losing section boundaries will break notes, section labels, and future backend semantics.
+## Local Data
 
-### 3. Tab editing is text-to-structure-to-text
+App data is stored locally with AsyncStorage.
 
-The tab editor is built around a simple transformation model:
+That means:
 
-1. parse tab text into bars/cells
-2. edit those bars/cells in the UI
-3. render bars back to tab text
+- songs survive reloads on the same device
+- the setlist survives reloads on the same device
+- there is no backend sync yet
 
-Core utility:
+State save/restore is still local-device behavior, not cloud backup.
 
-- `src/utils/tabLayout.ts`
+## Development
 
-This is the most important logic to test if the app becomes production-grade.
-
-### 4. Local persistence is only a local cache layer
-
-Songs and setlist are currently persisted with AsyncStorage in:
-
-- `src/store/BassTabProvider.tsx`
-
-This is **not** backend sync. It only gives:
-
-- local survival across reload/app restart
-- offline access to whatever is already on the device
-
-When a backend is added, AsyncStorage should be treated as the on-device cache / local persistence layer, not the source of truth.
-
-### 5. Performance view and export are different concerns
-
-- `PerformanceView` is a stage-reading screen
-- export screens are print/PDF oriented
-
-See:
-
-- `src/screens/LiveViewScreen.tsx`
-- `src/screens/SongExportScreen.tsx`
-- `src/screens/SetlistExportScreen.tsx`
-
-They may look similar, but they serve different workflows and should not be conflated.
-
-## Linux workflow
-
-Most of this app can be developed and validated on Linux:
-
-- install dependencies with `npm install`
-- run the app with `npm start`
-- validate the code with `npm run verify:linux`
-
-`verify:linux` currently checks:
-
-- TypeScript compilation with `tsc --noEmit`
-- Expo web bundling with `expo export --platform web`
-
-Those checks do not prove that native iOS compilation works, but they do prove the Expo app, routing, and JavaScript bundle are structurally valid from a Linux environment.
-
-## iOS deployment path
-
-Because this repo is an Expo-managed app, you do not need a local Mac just to produce an iOS build artifact. The practical path from Linux is Expo Application Services (EAS).
-
-### 1. Keep the app managed and Linux-clean
-
-Use Linux for normal development:
-
-- `npm start`
-- `npm run verify:linux`
-
-Avoid adding custom native iOS code unless you are prepared to validate that code with macOS tooling.
-
-### 2. Add production app identifiers
-
-Before shipping to iOS, set these in `app.json`:
-
-- `expo.ios.bundleIdentifier`
-- `expo.owner` if you are publishing under an Expo account or organization
-- app metadata such as app name, version, icons, splash, and privacy-related config
-
-Example:
-
-```json
-{
-  "expo": {
-    "ios": {
-      "bundleIdentifier": "com.example.basstab"
-    }
-  }
-}
-```
-
-### 3. Build iOS from Linux with EAS
-
-Install the CLI and authenticate:
+Install dependencies:
 
 ```sh
-npm install --global eas-cli
-eas login
+npm install
 ```
 
-Create an iOS build in Expo's hosted macOS environment:
+Start the app:
 
 ```sh
-eas build --platform ios --profile production
+npm start
 ```
 
-This repo already includes a minimal `eas.json` with `preview` and `production` profiles.
-
-### 4. Handle Apple requirements
-
-To distribute on iOS you will still need:
-
-- an Apple Developer account
-- signing credentials
-- an App Store Connect app record
-
-EAS can help manage credentials, but the Apple account requirement does not go away.
-
-### 5. Submit to TestFlight or the App Store
-
-Once the build succeeds:
+Useful targets:
 
 ```sh
-eas submit --platform ios --profile production
+npm run web
+npm run android
+npm run ios
 ```
 
-That submission targets App Store Connect, where you can release through TestFlight or App Store review.
+## Validation
 
-## What Linux can and cannot guarantee
+Type-check the project:
 
-Linux can validate:
+```sh
+npm run typecheck
+```
 
-- TypeScript and JavaScript correctness
-- Expo config parsing
-- Metro bundling
-- web behavior
-- much of the shared React Native application logic
+Export the web build:
 
-Linux cannot fully validate:
+```sh
+npm run export:web
+```
 
-- Xcode project generation issues after native prebuild changes
-- CocoaPods integration
-- iOS signing
-- App Store packaging and submission behavior
-- device-only iOS runtime issues
+Run the Linux-friendly validation flow:
 
-## Recommended next steps
+```sh
+npm run verify:linux
+```
 
-1. Set `expo.ios.bundleIdentifier` in `app.json`.
-2. Install `eas-cli`.
-3. Run `npm run verify:linux` before every hosted iOS build.
-4. Run `eas build --platform ios --profile preview` for the first remote test build.
+`verify:linux` runs:
+
+- `tsc --noEmit`
+- `expo export --platform web`
+
+## Repo Notes
+
+- `assets/bass.png` is used in the branded welcome/about experience
+- the welcome screen is also the in-app `About` screen
+- the free version deliberately keeps the setlist title fixed as `Setlist`
+
+## Build Notes
+
+This is still an Expo-managed app. For hosted iOS builds, use EAS once app identifiers and release metadata are ready.
