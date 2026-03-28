@@ -106,7 +106,9 @@ export function AppNavigator() {
         <Stack.Screen
           name="Welcome"
           component={WelcomeScreen}
-          options={{ title: 'Dad Band Bass About' }}
+          options={{
+            headerShown: false,
+          }}
         />
         <Stack.Screen
           name="MainTabs"

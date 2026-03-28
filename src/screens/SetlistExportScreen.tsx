@@ -93,7 +93,7 @@ export function SetlistExportScreen(_: Props) {
           <View style={styles.toolbarCopy}>
             <Text style={styles.toolbarTitle}>Dad Band Bass Export Setlist</Text>
             <Text style={styles.toolbarSubtitle}>
-              Songs are rendered in set order as consecutive portrait print pages.
+              Heading to a no-signal venue? Save the full set as a PDF and keep it on your device.
             </Text>
           </View>
 
@@ -115,7 +115,7 @@ export function SetlistExportScreen(_: Props) {
         <View style={styles.setlistBanner}>
           <Text style={styles.setlistTitle}>{FREE_SETLIST_TITLE}</Text>
           <Text style={styles.setlistSubtitle}>
-            {orderedSongs.length} song{orderedSongs.length === 1 ? '' : 's'} in performance order
+            {orderedSongs.length} song{orderedSongs.length === 1 ? '' : 's'} in performance order, ready for an offline backup
           </Text>
         </View>
 

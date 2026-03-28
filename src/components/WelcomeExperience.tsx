@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Image,
   Platform,
@@ -15,21 +16,52 @@ import { palette } from '../constants/colors';
 import { brandDisplayFontFamily } from '../constants/typography';
 
 const heroBassImage = require('../../assets/bass.png');
+const headlinePool = [
+  'Hold the low end together, even when the band doesn\'t.',
+  'Keep the bass part steady while everything else gets creative.',
+  'Tidy the tab, lock the groove, survive the rehearsal.',
+  'For nights when the chart is rough and the count-in is worse.',
+  'Because somebody in the band has to know what comes next.',
+];
+const vibePillPool = [
+  'Pub gigs',
+  'Questionable endings',
+  'Garage rehearsals',
+  'One too many intros',
+  'Bass face included',
+  'Singer picked the wrong key',
+  'Tempo discussions pending',
+  'Played it right eventually',
+  'That count-in was ambitious',
+  'Held together by groove',
+];
 
 interface WelcomeExperienceProps {
   actionLabel: string;
+  secondaryActionLabel?: string;
   footerText?: string;
   onPrimaryAction: () => void;
+  onSecondaryAction?: () => void;
 }
 
 export function WelcomeExperience({
   actionLabel,
+  secondaryActionLabel,
   footerText,
   onPrimaryAction,
+  onSecondaryAction,
 }: WelcomeExperienceProps) {
   const { width } = useWindowDimensions();
   const isWide = width >= 980;
   const isNarrow = width < 760;
+  const [headline] = useState(() => {
+    const index = Math.floor(Math.random() * headlinePool.length);
+    return headlinePool[index];
+  });
+  const [vibePills] = useState(() => {
+    const shuffled = [...vibePillPool].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 5);
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -57,16 +89,16 @@ export function WelcomeExperience({
               </View>
 
               <Text style={[styles.title, isNarrow && styles.titleNarrow]}>
-                Hold the low end together, even when the band doesn&apos;t.
+                {headline}
               </Text>
               <Text style={[styles.subtitle, isNarrow && styles.subtitleNarrow]}>
                 Keep one no-nonsense setlist, tidy up bass charts fast, and get a clean stage view for pub gigs, church runs, and Saturday dad-band rehearsals.
               </Text>
 
               <View style={styles.vibeRow}>
-                <VibePill label="Pub gigs" />
-                <VibePill label="Church bass" />
-                <VibePill label="Garage rehearsals" />
+                {vibePills.map((label: string) => (
+                  <VibePill key={label} label={label} />
+                ))}
               </View>
 
               <View style={styles.miniMeter}>
@@ -87,10 +119,53 @@ export function WelcomeExperience({
                 >
                   <Text style={styles.primaryButtonLabel}>{actionLabel}</Text>
                 </Pressable>
+                {secondaryActionLabel && onSecondaryAction ? (
+                  <Pressable
+                    onPress={onSecondaryAction}
+                    style={({ pressed }) => [
+                      styles.secondaryActionButton,
+                      isNarrow && styles.secondaryActionButtonNarrow,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.secondaryActionButtonLabel}>{secondaryActionLabel}</Text>
+                  </Pressable>
+                ) : null}
                 <View style={[styles.secondaryCallout, isNarrow && styles.secondaryCalloutNarrow]}>
                   <Text style={styles.secondaryCalloutLabel}>One setlist. Quick fixes. Big pocket energy.</Text>
                 </View>
               </View>
+
+              <Pressable
+                onPress={() => {}}
+                style={({ pressed }) => [
+                  styles.supportWidget,
+                  isNarrow && styles.supportWidgetNarrow,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.supportWidgetArt}>
+                  <View style={[styles.moneyBag, styles.moneyBagBack]}>
+                    <Text style={styles.moneyBagLabel}>£</Text>
+                  </View>
+                  <View style={styles.moneyBag}>
+                    <Text style={styles.moneyBagLabel}>£</Text>
+                  </View>
+                  <View style={styles.pintGlass}>
+                    <View style={styles.pintFoam} />
+                    <View style={styles.pintBody} />
+                  </View>
+                </View>
+                <View style={styles.supportWidgetCopy}>
+                  <Text style={styles.supportWidgetTitle}>Keep The Bass Funded</Text>
+                  <Text style={styles.supportWidgetText}>
+                    If Dad Band Bass saves the set, sling a pint into the rehearsal kitty.
+                  </Text>
+                </View>
+                <View style={styles.supportWidgetButton}>
+                  <Text style={styles.supportWidgetButtonLabel}>Buy Me a Pint</Text>
+                </View>
+              </Pressable>
             </View>
           </View>
 
@@ -107,6 +182,10 @@ export function WelcomeExperience({
           <FeatureCard
             title="Panic-Free Stage View"
             description="Read one section at a time with manual navigation instead of trusting flaky auto-scroll on stage."
+          />
+          <FeatureCard
+            title="Offline PDF Backup"
+            description="No signal at the gig? Export a PDF before you leave and keep the chart on your device."
           />
           <FeatureCard
             title="Quick Tab Cleanup"
@@ -452,6 +531,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#f9fafb',
   },
+  secondaryActionButton: {
+    minHeight: 52,
+    borderRadius: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    backgroundColor: '#fff7ed',
+    borderWidth: 1,
+    borderColor: 'rgba(120, 53, 15, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryActionButtonNarrow: {
+    width: '100%',
+  },
+  secondaryActionButtonLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#7c2d12',
+  },
   pressed: {
     opacity: 0.88,
   },
@@ -474,6 +572,114 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '700',
     color: '#7c2d12',
+  },
+  supportWidget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#fff7ed',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  supportWidgetNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  supportWidgetArt: {
+    width: 108,
+    minHeight: 72,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moneyBag: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    width: 34,
+    height: 40,
+    borderRadius: 16,
+    backgroundColor: '#22c55e',
+    borderWidth: 2,
+    borderColor: '#166534',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moneyBagBack: {
+    left: 24,
+    bottom: 18,
+    transform: [{ rotate: '10deg' }],
+    opacity: 0.92,
+  },
+  moneyBagLabel: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#052e16',
+  },
+  pintGlass: {
+    position: 'absolute',
+    right: 10,
+    bottom: 2,
+    width: 34,
+    height: 56,
+    alignItems: 'center',
+  },
+  pintFoam: {
+    width: 36,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#fff7ed',
+    borderWidth: 1,
+    borderColor: '#d6d3d1',
+    marginBottom: -2,
+    zIndex: 1,
+  },
+  pintBody: {
+    width: 30,
+    height: 48,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    backgroundColor: '#f59e0b',
+    borderWidth: 2,
+    borderColor: '#92400e',
+  },
+  supportWidgetCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  supportWidgetTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#7c2d12',
+  },
+  supportWidgetText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#9a3412',
+  },
+  supportWidgetButton: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#fbbf24',
+    borderWidth: 2,
+    borderColor: '#92400e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  supportWidgetButtonLabel: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#78350f',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   featureGrid: {
     flexDirection: 'row',

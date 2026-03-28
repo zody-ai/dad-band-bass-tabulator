@@ -82,7 +82,7 @@ export function SongExportScreen({ route }: Props) {
           <View style={styles.toolbarCopy}>
             <Text style={styles.toolbarTitle}>Dad Band Bass Export Song</Text>
             <Text style={styles.toolbarSubtitle}>
-              Clean portrait layout for printing or saving to PDF.
+              No signal at the gig? Save this chart as a PDF and keep it on your device.
             </Text>
           </View>
 

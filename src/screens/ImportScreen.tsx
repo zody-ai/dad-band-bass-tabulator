@@ -3,6 +3,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import { AppSectionNav } from '../components/AppSectionNav';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { palette } from '../constants/colors';
@@ -40,13 +41,12 @@ export function ImportScreen({ navigation }: Props) {
         <Text style={styles.subtitle}>
           Import is a Dad Band Bass Plus feature. The free version keeps editing, setlists, and live view focused.
         </Text>
-        <View style={styles.headerActionRow}>
-          <PrimaryButton
-            label="About"
-            onPress={() => navigation.navigate('Welcome')}
-            variant="ghost"
-          />
-        </View>
+        <AppSectionNav
+          current="Import"
+          onLibrary={() => navigation.navigate('Library')}
+          onSetlist={() => navigation.navigate('Setlist')}
+          onAbout={() => navigation.navigate('Welcome')}
+        />
       </View>
 
       <View style={styles.plusCard}>
@@ -93,12 +93,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     color: '#4b5563',
-  },
-  headerActionRow: {
-    paddingTop: 6,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
   },
   plusCard: {
     backgroundColor: '#1f2937',

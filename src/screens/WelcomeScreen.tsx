@@ -8,9 +8,11 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Welcome'>;
 export function WelcomeScreen({ navigation }: Props) {
   return (
     <WelcomeExperience
-      actionLabel="Tab Library"
+      actionLabel="Open Library"
+      secondaryActionLabel="Open Setlist"
       footerText="Dad Band Bass welcome screen for the free single-setlist version."
-      onPrimaryAction={() => navigation.navigate('MainTabs')}
+      onPrimaryAction={() => navigation.navigate('MainTabs', { screen: 'Library' })}
+      onSecondaryAction={() => navigation.navigate('MainTabs', { screen: 'Setlist' })}
     />
   );
 }

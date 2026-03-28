@@ -5,6 +5,7 @@ import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { EmptyState } from '../components/EmptyState';
+import { AppSectionNav } from '../components/AppSectionNav';
 import { LibrarySongCard } from '../components/LibrarySongCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
@@ -99,12 +100,13 @@ export function LibraryScreen({ navigation }: Props) {
             Keep rehearsal-night staples, pub-set survivors, and last-minute fixes ready to go.
           </Text>
         </View>
+        <AppSectionNav
+          current="Library"
+          onLibrary={() => navigation.navigate('Library')}
+          onSetlist={() => navigation.navigate('Setlist')}
+          onAbout={() => navigation.navigate('Welcome')}
+        />
         <View style={styles.actionRow}>
-          <PrimaryButton
-            label="About"
-            onPress={() => navigation.navigate('Welcome')}
-            variant="ghost"
-          />
           <PrimaryButton label="Pack Away" onPress={handleSaveState} variant="secondary" />
           <PrimaryButton label="Bring It Back" onPress={handleLoadState} variant="ghost" />
           <PrimaryButton label="New Song" onPress={handleCreateSong} />

@@ -5,6 +5,7 @@ import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { EmptyState } from '../components/EmptyState';
+import { AppSectionNav } from '../components/AppSectionNav';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { palette } from '../constants/colors';
@@ -66,12 +67,13 @@ export function SetlistScreen({ navigation }: Props) {
             The free version keeps one running order for the whole night. Move songs fast and keep the set tight.
           </Text>
         </View>
+        <AppSectionNav
+          current="Setlist"
+          onLibrary={() => navigation.navigate('Library')}
+          onSetlist={() => navigation.navigate('Setlist')}
+          onAbout={() => navigation.navigate('Welcome')}
+        />
         <View style={styles.headerActions}>
-          <PrimaryButton
-            label="About"
-            onPress={() => navigation.navigate('Welcome')}
-            variant="ghost"
-          />
           {orderedSongs.length > 0 ? (
             <PrimaryButton
               label="Export Multi-Page PDF"

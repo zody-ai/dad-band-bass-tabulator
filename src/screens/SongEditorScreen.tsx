@@ -53,13 +53,13 @@ export function SongEditorScreen({ navigation, route }: Props) {
         <View style={styles.headingBlock}>
           <Text style={styles.title}>Dad Band Bass Song Editor</Text>
           <Text style={styles.subtitle}>
-            Autosaves straight into the local mock store.
+            Tidy your chart, shape the bars, and get it ready for rehearsal.
           </Text>
         </View>
         <View style={styles.headerActions}>
           <PrimaryButton
-            label="About"
-            onPress={() => navigation.navigate('Welcome')}
+            label="Tab Library"
+            onPress={() => navigation.navigate('MainTabs')}
             variant="ghost"
           />
           <PrimaryButton
