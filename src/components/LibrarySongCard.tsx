@@ -10,6 +10,8 @@ interface LibrarySongCardProps {
   onEdit: () => void;
   onLive: () => void;
   onDelete: () => void;
+  onToggleCommunityRelease?: () => void;
+  isCommunityReleaseUpdating?: boolean;
 }
 
 export function LibrarySongCard({
@@ -17,14 +19,17 @@ export function LibrarySongCard({
   onEdit,
   onLive,
   onDelete,
+  onToggleCommunityRelease,
+  isCommunityReleaseUpdating = false,
 }: LibrarySongCardProps) {
   return (
     <View style={styles.card}>
       <Pressable onPress={onEdit} style={({ pressed }) => [styles.summary, pressed && styles.pressed]}>
         <View style={styles.header}>
           <View style={styles.titleBlock}>
-            <Text style={styles.title}>{song.title}</Text>
-            <Text style={styles.artist}>{song.artist}</Text>
+            <Text style={styles.titleLine} numberOfLines={1} ellipsizeMode="tail">
+              {song.title} • {song.artist}
+            </Text>
           </View>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{song.key}</Text>
@@ -32,15 +37,35 @@ export function LibrarySongCard({
         </View>
 
         <View style={styles.metaRow}>
-          <Text style={styles.metaText}>{song.tuning}</Text>
+          <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
+            {`${song.tuning} • Updated ${formatUpdatedAt(song.updatedAt)}`}
+          </Text>
+          {song.releasedToCommunity ? (
+            <View style={styles.communityBadge}>
+              <Text style={styles.communityBadgeText}>Community Live</Text>
+            </View>
+          ) : null}
         </View>
       </Pressable>
 
       <View style={styles.footer}>
-        <Text style={styles.updated}>Updated {formatUpdatedAt(song.updatedAt)}</Text>
         <View style={styles.actions}>
           <PrimaryButton label="Edit" onPress={onEdit} variant="ghost" />
           <PrimaryButton label="Perform" onPress={onLive} variant="secondary" />
+          {onToggleCommunityRelease ? (
+            <PrimaryButton
+              label={
+                isCommunityReleaseUpdating
+                  ? 'Updating...'
+                  : song.releasedToCommunity
+                    ? 'Unrelease'
+                    : 'Release'
+              }
+              onPress={onToggleCommunityRelease}
+              variant="ghost"
+              disabled={isCommunityReleaseUpdating}
+            />
+          ) : null}
           <PrimaryButton label="Bin Song" onPress={onDelete} variant="danger" />
         </View>
       </View>
@@ -67,16 +92,12 @@ const styles = StyleSheet.create({
   },
   titleBlock: {
     flex: 1,
-    gap: 4,
+    justifyContent: 'center',
   },
-  title: {
-    fontSize: 22,
+  titleLine: {
+    fontSize: 20,
     fontWeight: '700',
     color: palette.text,
-  },
-  artist: {
-    fontSize: 16,
-    color: palette.textMuted,
   },
   badge: {
     minWidth: 52,
@@ -100,12 +121,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: palette.textMuted,
   },
+  communityBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#dbeafe',
+  },
+  communityBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: '#1e40af',
+  },
   footer: {
     gap: 12,
-  },
-  updated: {
-    fontSize: 14,
-    color: palette.textMuted,
   },
   actions: {
     flexDirection: 'row',

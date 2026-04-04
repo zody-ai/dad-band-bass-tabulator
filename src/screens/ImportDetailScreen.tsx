@@ -5,6 +5,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { palette } from '../constants/colors';
 import { brandDisplayFontFamily } from '../constants/typography';
+import { resolveUpgradeTrigger, useUpgradePrompt } from '../features/subscription';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 
@@ -12,6 +13,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ImportDetail'>;
 
 export function ImportDetailScreen({ navigation, route }: Props) {
   const { type } = route.params;
+  const { showUpgradePrompt } = useUpgradePrompt();
   const { createSong } = useBassTab();
 
   const title = type === 'image' ? 'Dad Band Bass Image Import' : 'Dad Band Bass PDF Import';
@@ -30,6 +32,13 @@ export function ImportDetailScreen({ navigation, route }: Props) {
 
       navigation.replace('SongEditor', { songId: song.id });
     } catch (error) {
+      const trigger = resolveUpgradeTrigger(error);
+
+      if (trigger) {
+        showUpgradePrompt(trigger);
+        return;
+      }
+
       console.warn('Could not create imported draft song', error);
     }
   };

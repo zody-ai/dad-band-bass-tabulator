@@ -11,6 +11,8 @@ import { AuthEntryScreen } from '../features/auth/components/AuthEntryScreen';
 import { AuthRestoringScreen } from '../features/auth/components/AuthRestoringScreen';
 import { getAuthRouteMode } from '../features/auth/state/authReducer';
 import { useAuth } from '../features/auth/state/useAuth';
+import { AccountScreen } from '../screens/AccountScreen';
+import { HomeScreen } from '../screens/HomeScreen';
 import { ImportDetailScreen } from '../screens/ImportDetailScreen';
 import { ImportPasteScreen } from '../screens/ImportPasteScreen';
 import { ImportScreen } from '../screens/ImportScreen';
@@ -21,6 +23,7 @@ import { SetlistExportScreen } from '../screens/SetlistExportScreen';
 import { SongExportScreen } from '../screens/SongExportScreen';
 import { SetlistScreen } from '../screens/SetlistScreen';
 import { SongEditorScreen } from '../screens/SongEditorScreen';
+import { UpgradeScreen } from '../screens/UpgradeScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { useBassTab } from '../store/BassTabProvider';
 import { RootStackParamList, TabParamList } from './types';
@@ -67,8 +70,9 @@ function MainTabs() {
         name="Import"
         component={ImportScreen}
         options={{
+          tabBarLabel: 'Community',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="download-outline" color={color} size={size} />
+            <Ionicons name="people-outline" color={color} size={size} />
           ),
         }}
       />
@@ -173,6 +177,31 @@ export function AppNavigator() {
               component={WelcomeScreen}
               options={{
                 headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Account"
+              component={AccountScreen}
+              options={{ title: 'BassTab Account' }}
+            />
+            <Stack.Screen
+              name="Upgrade"
+              component={UpgradeScreen}
+              options={{
+                title: 'Go Pro',
+                headerStyle: { backgroundColor: '#0b0b0f' },
+                headerTintColor: '#f8fafc',
+                headerTitleStyle: {
+                  color: '#f8fafc',
+                  fontWeight: '700',
+                  fontFamily: brandDisplayFontFamily,
+                },
+                contentStyle: { backgroundColor: '#0b0b0f' },
               }}
             />
             <Stack.Screen

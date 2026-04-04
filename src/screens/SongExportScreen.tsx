@@ -1,10 +1,14 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { createBassTabApiFromEnv } from '../api';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { TabPagePreview } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
 import { brandDisplayFontFamily } from '../constants/typography';
+import { resolveUpgradeTrigger, useSubscription } from '../features/subscription';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { flattenSongRowsToChart } from '../utils/songChart';
@@ -49,11 +53,69 @@ const printCss = `
   }
 `;
 
-export function SongExportScreen({ route }: Props) {
+export function SongExportScreen({ navigation, route }: Props) {
   const { songId } = route.params;
+  const { tier } = useSubscription();
+  const backendApi = useMemo(() => createBassTabApiFromEnv(), []);
   const { songs } = useBassTab();
   const song = songs.find((item) => item.id === songId);
+  const [isCheckingPdfAccess, setIsCheckingPdfAccess] = useState(Boolean(backendApi));
+  const [isPdfLocked, setIsPdfLocked] = useState(tier === 'FREE');
   useWebPrintStyles('song-export-print-styles', printCss);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkPdfAccess = async () => {
+      if (!song) {
+        if (isMounted) {
+          setIsCheckingPdfAccess(false);
+        }
+        return;
+      }
+
+      if (!backendApi) {
+        if (isMounted) {
+          setIsPdfLocked(tier === 'FREE');
+          setIsCheckingPdfAccess(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsCheckingPdfAccess(true);
+      }
+
+      try {
+        await backendApi.getSong(song.id, { mode: 'PDF' });
+
+        if (isMounted) {
+          setIsPdfLocked(false);
+        }
+      } catch (error) {
+        const trigger = resolveUpgradeTrigger(error);
+
+        if (isMounted) {
+          if (trigger === 'PDF_EXPORT') {
+            setIsPdfLocked(true);
+          } else {
+            console.warn('Song PDF export access check failed; falling back to local tier gate.', error);
+            setIsPdfLocked(tier === 'FREE');
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsCheckingPdfAccess(false);
+        }
+      }
+    };
+
+    void checkPdfAccess();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [backendApi, song, tier]);
 
   if (!song) {
     return (
@@ -70,6 +132,68 @@ export function SongExportScreen({ route }: Props) {
 
   const chart = flattenSongRowsToChart(song);
   const { stringNames, bars } = parseTab(chart.tab);
+  const teaserTab = chart.tab.split('\n').slice(0, 4).join('\n');
+
+  if (isCheckingPdfAccess) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.lockedCard}>
+            <Text style={styles.lockedEyebrow}>Checking Access</Text>
+            <Text style={styles.lockedTitle}>Checking PDF export permission…</Text>
+            <Text style={styles.lockedSubtitle}>
+              One moment while we validate your export access.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (isPdfLocked) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.lockedCard}>
+            <Text style={styles.lockedEyebrow}>Pro Export</Text>
+            <Text style={styles.lockedTitle}>Song PDF export is a Pro feature</Text>
+            <Text style={styles.lockedSubtitle}>
+              No Internet at GIG - then export your tabs to your device.
+            </Text>
+
+            <View style={styles.teaserCard}>
+              <Text style={styles.teaserTitle}>{song.title}</Text>
+              <Text style={styles.teaserMeta}>
+                {song.artist} • {song.key} • {song.tuning}
+              </Text>
+              <Text style={styles.teaserLabel}>Limited display</Text>
+              <Text style={styles.teaserTab}>{teaserTab}</Text>
+            </View>
+
+            <View style={styles.lockedActions}>
+              <PrimaryButton
+                label="Go Pro for PDF Export"
+                onPress={() => navigation.navigate('Upgrade')}
+              />
+              <PrimaryButton
+                label="Maybe Later"
+                onPress={() => navigation.goBack()}
+                variant="ghost"
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -249,6 +373,68 @@ const styles = StyleSheet.create({
   chartBody: {
     gap: 12,
   },
+  lockedCard: {
+    width: '100%',
+    maxWidth: 820,
+    borderRadius: 20,
+    padding: 20,
+    backgroundColor: '#0b0b0f',
+    borderWidth: 1,
+    borderColor: '#1f2937',
+    gap: 12,
+  },
+  lockedEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    color: '#f59e0b',
+  },
+  lockedTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '900',
+    color: '#f8fafc',
+  },
+  lockedSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#cbd5e1',
+  },
+  teaserCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+    backgroundColor: '#111827',
+    padding: 14,
+    gap: 6,
+  },
+  teaserTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#f8fafc',
+  },
+  teaserMeta: {
+    fontSize: 13,
+    color: '#94a3b8',
+  },
+  teaserLabel: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    color: '#f59e0b',
+  },
+  teaserTab: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#e2e8f0',
+  },
+  lockedActions: {
+    gap: 8,
+  },
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -259,15 +445,15 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#111827',
+    color: '#1f2937',
   },
   emptyText: {
-    fontSize: 17,
-    lineHeight: 25,
+    fontSize: 16,
+    lineHeight: 24,
     color: '#4b5563',
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.88,
+    opacity: 0.86,
   },
 });

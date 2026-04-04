@@ -8,6 +8,8 @@ export interface SongMetadataDto {
   feelNote: string;
   tuning: string;
   updatedAt: string;
+  releasedToCommunity?: boolean;
+  communityReleasedAt?: string | null;
 }
 
 export interface SongChartDto {
@@ -49,6 +51,59 @@ export interface ReplaceSongChartRequestDto {
 
 export interface ReplacePlaylistOrderRequestDto {
   songIds: string[];
+}
+
+export type SubscriptionTierDto = 'FREE' | 'PRO';
+export type SubscriptionStatusDto = 'FREE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | 'EXPIRED';
+export type BillingCurrencyDto = 'GBP' | 'USD' | 'EUR';
+
+export interface SubscriptionCapabilitiesDto {
+  maxSongs: number | null;
+  maxSetlists: number | null;
+  maxCommunitySongs: number | null;
+  svgEnabled: boolean;
+}
+
+export interface SubscriptionSnapshotDto {
+  tier: SubscriptionTierDto;
+  status: SubscriptionStatusDto;
+  planCode: string | null;
+  currency: BillingCurrencyDto | null;
+  unitAmountMinor: number | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  trialEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  capabilities: SubscriptionCapabilitiesDto;
+}
+
+export interface SubscriptionPriceDto {
+  currency: BillingCurrencyDto;
+  unitAmountMinor: number;
+}
+
+export interface SubscriptionPlanDto {
+  plan: string;
+  label: string;
+  interval: string;
+  prices: SubscriptionPriceDto[];
+}
+
+export interface SubscriptionPricingDto {
+  plans: SubscriptionPlanDto[];
+}
+
+export interface MockUpgradeRequestDto {
+  planCode: 'PRO_MONTHLY';
+  currency: BillingCurrencyDto;
+}
+
+export interface CommunitySavedSongDto {
+  communitySongId: string;
+}
+
+export interface SaveCommunitySongRequestDto {
+  communitySongId: string;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -99,6 +154,9 @@ const isSongMetadataDto = (value: unknown): value is SongMetadataDto => {
     return false;
   }
 
+  const releasedToCommunity = value.releasedToCommunity;
+  const communityReleasedAt = value.communityReleasedAt;
+
   return (
     typeof value.id === 'string' &&
     typeof value.title === 'string' &&
@@ -106,7 +164,11 @@ const isSongMetadataDto = (value: unknown): value is SongMetadataDto => {
     typeof value.key === 'string' &&
     typeof value.feelNote === 'string' &&
     typeof value.tuning === 'string' &&
-    typeof value.updatedAt === 'string'
+    typeof value.updatedAt === 'string' &&
+    (typeof releasedToCommunity === 'undefined' || typeof releasedToCommunity === 'boolean') &&
+    (typeof communityReleasedAt === 'undefined' ||
+      typeof communityReleasedAt === 'string' ||
+      communityReleasedAt === null)
   );
 };
 
@@ -124,6 +186,92 @@ const isPlaylistDto = (value: unknown): value is PlaylistDto => {
     typeof value.updatedAt === 'string' &&
     isStringArray(value.songIds)
   );
+};
+
+const subscriptionTiers: SubscriptionTierDto[] = ['FREE', 'PRO'];
+const subscriptionStatuses: SubscriptionStatusDto[] = ['FREE', 'TRIALING', 'ACTIVE', 'PAST_DUE', 'CANCELLED', 'EXPIRED'];
+const billingCurrencies: BillingCurrencyDto[] = ['GBP', 'USD', 'EUR'];
+
+const isNullableString = (value: unknown): value is string | null =>
+  typeof value === 'string' || value === null;
+
+const isNullableNumber = (value: unknown): value is number | null =>
+  typeof value === 'number' || value === null;
+
+const isNullableCurrency = (value: unknown): value is BillingCurrencyDto | null =>
+  value === null || billingCurrencies.includes(value as BillingCurrencyDto);
+
+const isSubscriptionCapabilitiesDto = (value: unknown): value is SubscriptionCapabilitiesDto => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isNullableNumber(value.maxSongs) &&
+    isNullableNumber(value.maxSetlists) &&
+    isNullableNumber(value.maxCommunitySongs) &&
+    typeof value.svgEnabled === 'boolean'
+  );
+};
+
+const isSubscriptionSnapshotDto = (value: unknown): value is SubscriptionSnapshotDto => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    subscriptionTiers.includes(value.tier as SubscriptionTierDto) &&
+    subscriptionStatuses.includes(value.status as SubscriptionStatusDto) &&
+    isNullableString(value.planCode) &&
+    isNullableCurrency(value.currency) &&
+    isNullableNumber(value.unitAmountMinor) &&
+    isNullableString(value.currentPeriodStart) &&
+    isNullableString(value.currentPeriodEnd) &&
+    isNullableString(value.trialEnd) &&
+    typeof value.cancelAtPeriodEnd === 'boolean' &&
+    isSubscriptionCapabilitiesDto(value.capabilities)
+  );
+};
+
+const isSubscriptionPriceDto = (value: unknown): value is SubscriptionPriceDto => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    billingCurrencies.includes(value.currency as BillingCurrencyDto) &&
+    Number.isInteger(value.unitAmountMinor)
+  );
+};
+
+const isSubscriptionPlanDto = (value: unknown): value is SubscriptionPlanDto => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.plan === 'string' &&
+    typeof value.label === 'string' &&
+    typeof value.interval === 'string' &&
+    Array.isArray(value.prices) &&
+    value.prices.every((price) => isSubscriptionPriceDto(price))
+  );
+};
+
+const isSubscriptionPricingDto = (value: unknown): value is SubscriptionPricingDto => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return Array.isArray(value.plans) && value.plans.every((plan) => isSubscriptionPlanDto(plan));
+};
+
+const isCommunitySavedSongDto = (value: unknown): value is CommunitySavedSongDto => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value.communitySongId === 'string';
 };
 
 export const parseSongMetadataListDto = (value: unknown): SongMetadataDto[] => {
@@ -164,4 +312,32 @@ export const parsePlaylistDto = (value: unknown): PlaylistDto => {
   }
 
   return value;
+};
+
+export const parseSubscriptionSnapshotDto = (value: unknown): SubscriptionSnapshotDto => {
+  if (!isSubscriptionSnapshotDto(value)) {
+    throw new Error('Invalid subscription snapshot response payload.');
+  }
+
+  return value;
+};
+
+export const parseSubscriptionPricingDto = (value: unknown): SubscriptionPricingDto => {
+  if (!isSubscriptionPricingDto(value)) {
+    throw new Error('Invalid subscription pricing response payload.');
+  }
+
+  return value;
+};
+
+export const parseCommunitySavedSongsDto = (value: unknown): CommunitySavedSongDto[] => {
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) {
+    return value.map((communitySongId) => ({ communitySongId }));
+  }
+
+  if (Array.isArray(value) && value.every((item) => isCommunitySavedSongDto(item))) {
+    return value;
+  }
+
+  throw new Error('Invalid community saved songs response payload.');
 };

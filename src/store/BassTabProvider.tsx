@@ -12,6 +12,9 @@ import { createBassTabApiFromEnv, fromPlaylistDto, fromSongDto } from '../api';
 import { FREE_SETLIST_TITLE } from '../constants/setlist';
 import { tuningOptions } from '../constants/tunings';
 import { seededSetlist, seededSongs } from '../data/seed';
+import { useSubscription } from '../features/subscription/SubscriptionContext';
+import { FREE_PLAN_LIMITS } from '../features/subscription/subscriptionLimits';
+import { UpgradeGateError } from '../features/subscription/upgradePrompts';
 import { Song, SongChart, SongRow, Setlist } from '../types/models';
 import { createId } from '../utils/ids';
 import { loadSnapshotFile, saveSnapshotFile, stateStorageLabel } from '../utils/stateSnapshot';
@@ -55,13 +58,19 @@ interface BassTabSnapshot {
   exportedAt: string;
   songs: Array<Song | LegacySong>;
   setlist: Setlist;
+  setlists?: Setlist[];
+  activeSetlistId?: string;
 }
 
 interface BassTabContextValue {
   songs: Song[];
   setlist: Setlist;
+  setlists: Setlist[];
+  activeSetlistId: string;
   storageFileUri: string;
   createSong: (input?: SongInput) => Promise<Song>;
+  createSetlist: (name?: string) => Setlist;
+  setActiveSetlist: (setlistId: string) => void;
   deleteSong: (songId: string) => void;
   updateSong: (songId: string, updates: Partial<Song>) => void;
   updateSongChart: (songId: string, chart: Pick<SongChart, 'tab' | 'rowAnnotations' | 'rowBarCounts'>) => void;
@@ -78,6 +87,8 @@ const BassTabContext = createContext<BassTabContextValue | undefined>(undefined)
 const storageKeys = {
   songs: 'basstab:songs',
   setlist: 'basstab:setlist',
+  setlists: 'basstab:setlists',
+  activeSetlistId: 'basstab:active-setlist-id',
 };
 
 const createEmptyRow = (label = 'Intro'): SongRow => ({
@@ -118,7 +129,12 @@ const isSetlist = (value: unknown): value is Setlist => {
 
 const normalizeSetlist = (setlist: Setlist): Setlist => ({
   ...setlist,
-  name: FREE_SETLIST_TITLE,
+  name: setlist.name?.trim() || FREE_SETLIST_TITLE,
+});
+
+const sanitizeSetlistSongIds = (setlist: Setlist, knownSongIds: Set<string>): Setlist => ({
+  ...setlist,
+  songIds: setlist.songIds.filter((songId) => knownSongIds.has(songId)),
 });
 
 const migrateLegacySong = (legacySong: Song | LegacySong): Song => {
@@ -143,26 +159,28 @@ const migrateLegacySong = (legacySong: Song | LegacySong): Song => {
   }
 
   const stringNames = parseTab(legacySections[0].tab).stringNames;
-  const rows = legacySections.map((section: LegacySection) => {
-    const chart = mergeChartIntoSongRows(
-      { stringNames, rows: [] },
-      {
-        tab: section.tab,
-        rowAnnotations:
-          section.rowAnnotations?.map((annotation, rowIndex: number) =>
-            rowIndex === 0
-              ? { ...annotation, label: annotation.label || section.name }
-              : annotation,
-          ) ?? [{ label: section.name, beforeText: '', afterText: '' }],
-        rowBarCounts: section.rowBarCounts ?? [],
-      },
-    );
+  const rows = legacySections
+    .map((section: LegacySection) => {
+      const chart = mergeChartIntoSongRows(
+        { stringNames, rows: [] },
+        {
+          tab: section.tab,
+          rowAnnotations:
+            section.rowAnnotations?.map((annotation, rowIndex: number) =>
+              rowIndex === 0
+                ? { ...annotation, label: annotation.label || section.name }
+                : annotation,
+            ) ?? [{ label: section.name, beforeText: '', afterText: '' }],
+          rowBarCounts: section.rowBarCounts ?? [],
+        },
+      );
 
-    return chart.rows.map((row, index) => ({
-      ...row,
-      id: index === 0 ? section.id : createId('row'),
-    }));
-  }).flat();
+      return chart.rows.map((row, index) => ({
+        ...row,
+        id: index === 0 ? section.id : createId('row'),
+      }));
+    })
+    .flat();
 
   return {
     id: legacySong.id,
@@ -177,32 +195,61 @@ const migrateLegacySong = (legacySong: Song | LegacySong): Song => {
   };
 };
 
-const parseSnapshot = (rawSnapshot: string): { songs: Song[]; setlist: Setlist } => {
+const parseSnapshot = (rawSnapshot: string): { songs: Song[]; setlists: Setlist[]; activeSetlistId: string } => {
   const parsed = JSON.parse(rawSnapshot) as Partial<BassTabSnapshot>;
 
-  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.songs) || !isSetlist(parsed.setlist)) {
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.songs)) {
     throw new Error('Snapshot is not a valid BassTab JSON file.');
   }
 
   const songs = parsed.songs.map(migrateLegacySong);
   const knownSongIds = new Set(songs.map((song) => song.id));
 
+  const parsedSetlists = Array.isArray(parsed.setlists)
+    ? parsed.setlists.filter(isSetlist)
+    : parsed.setlist && isSetlist(parsed.setlist)
+      ? [parsed.setlist]
+      : [];
+
+  if (parsedSetlists.length === 0) {
+    throw new Error('Snapshot is missing setlist data.');
+  }
+
+  const setlists = parsedSetlists
+    .map((setlist) => normalizeSetlist(sanitizeSetlistSongIds(setlist, knownSongIds)));
+
+  const activeSetlistId =
+    parsed.activeSetlistId && setlists.some((setlist) => setlist.id === parsed.activeSetlistId)
+      ? parsed.activeSetlistId
+      : setlists[0].id;
+
   return {
     songs,
-    setlist: normalizeSetlist({
-      ...parsed.setlist,
-      songIds: parsed.setlist.songIds.filter((songId) => knownSongIds.has(songId)),
-    }),
+    setlists,
+    activeSetlistId,
   };
 };
 
 export function BassTabProvider({ children }: PropsWithChildren) {
   const [songs, setSongs] = useState<Song[]>(seededSongs);
-  const [setlist, setSetlist] = useState<Setlist>(seededSetlist);
+  const [setlists, setSetlists] = useState<Setlist[]>([normalizeSetlist(seededSetlist)]);
+  const [activeSetlistId, setActiveSetlistId] = useState(seededSetlist.id);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const { tier, capabilities } = useSubscription();
   const backendBaseUrl = process.env.EXPO_PUBLIC_BASSTAB_API_URL?.trim();
   const backendApi = useMemo(() => createBassTabApiFromEnv(), []);
   const backendStorageLabel = 'BassTab backend';
+
+  const setlist = useMemo(
+    () => setlists.find((item) => item.id === activeSetlistId) ?? setlists[0] ?? normalizeSetlist(seededSetlist),
+    [activeSetlistId, setlists],
+  );
+
+  useEffect(() => {
+    if (setlists.length > 0 && !setlists.some((item) => item.id === activeSetlistId)) {
+      setActiveSetlistId(setlists[0].id);
+    }
+  }, [activeSetlistId, setlists]);
 
   const hydrateFromBackend = async () => {
     if (!backendApi) {
@@ -219,14 +266,11 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     const nextSongs = songDtos.map(fromSongDto);
     const knownSongIds = new Set(nextSongs.map((song) => song.id));
     const playlist = fromPlaylistDto(playlistDto);
+    const normalizedPlaylist = normalizeSetlist(sanitizeSetlistSongIds(playlist, knownSongIds));
 
     setSongs(nextSongs);
-    setSetlist(
-      normalizeSetlist({
-        ...playlist,
-        songIds: playlist.songIds.filter((songId) => knownSongIds.has(songId)),
-      }),
-    );
+    setSetlists([normalizedPlaylist]);
+    setActiveSetlistId(normalizedPlaylist.id);
   };
 
   useEffect(() => {
@@ -248,24 +292,50 @@ export function BassTabProvider({ children }: PropsWithChildren) {
 
     const hydrateFromStorage = async () => {
       try {
-        const [storedSongs, storedSetlist] = await Promise.all([
+        const [storedSongs, storedSetlists, storedLegacySetlist, storedActiveSetlistId] = await Promise.all([
           AsyncStorage.getItem(storageKeys.songs),
+          AsyncStorage.getItem(storageKeys.setlists),
           AsyncStorage.getItem(storageKeys.setlist),
+          AsyncStorage.getItem(storageKeys.activeSetlistId),
         ]);
 
         const parsedSongs = storedSongs ? (JSON.parse(storedSongs) as Array<Song | LegacySong>) : null;
-        const parsedSetlist = storedSetlist ? (JSON.parse(storedSetlist) as Setlist) : null;
+        const nextSongs = parsedSongs && Array.isArray(parsedSongs)
+          ? parsedSongs.map(migrateLegacySong)
+          : seededSongs;
+        const knownSongIds = new Set(nextSongs.map((song) => song.id));
+
+        const parsedSetlists = storedSetlists
+          ? (JSON.parse(storedSetlists) as unknown[])
+          : null;
+        const parsedLegacySetlist = storedLegacySetlist
+          ? (JSON.parse(storedLegacySetlist) as unknown)
+          : null;
+
+        const nextSetlists = Array.isArray(parsedSetlists) && parsedSetlists.every(isSetlist)
+          ? parsedSetlists
+          : parsedLegacySetlist && isSetlist(parsedLegacySetlist)
+            ? [parsedLegacySetlist]
+            : [seededSetlist];
 
         if (!isMounted) {
           return;
         }
 
-        if (parsedSongs && Array.isArray(parsedSongs)) {
-          setSongs(parsedSongs.map(migrateLegacySong));
-        }
+        setSongs(nextSongs);
 
-        if (parsedSetlist) {
-          setSetlist(normalizeSetlist(parsedSetlist));
+        const normalizedSetlists = nextSetlists.map((storedSetlist) =>
+          normalizeSetlist(sanitizeSetlistSongIds(storedSetlist, knownSongIds)));
+
+        setSetlists(normalizedSetlists);
+
+        if (
+          storedActiveSetlistId &&
+          normalizedSetlists.some((storedSetlist) => storedSetlist.id === storedActiveSetlistId)
+        ) {
+          setActiveSetlistId(storedActiveSetlistId);
+        } else {
+          setActiveSetlistId(normalizedSetlists[0].id);
         }
       } catch (error) {
         console.warn('BassTab storage hydrate failed', error);
@@ -289,7 +359,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       }
     };
 
-    hydrate();
+    void hydrate();
 
     return () => {
       isMounted = false;
@@ -305,6 +375,8 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       try {
         await Promise.all([
           AsyncStorage.setItem(storageKeys.songs, JSON.stringify(songs)),
+          AsyncStorage.setItem(storageKeys.setlists, JSON.stringify(setlists)),
+          AsyncStorage.setItem(storageKeys.activeSetlistId, activeSetlistId),
           AsyncStorage.setItem(storageKeys.setlist, JSON.stringify(setlist)),
         ]);
       } catch (error) {
@@ -312,15 +384,24 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       }
     };
 
-    persist();
-  }, [hasHydrated, setlist, songs]);
+    void persist();
+  }, [activeSetlistId, hasHydrated, setlist, setlists, songs]);
 
   const createSong = async (input?: SongInput): Promise<Song> => {
+    const maxSongs = capabilities.maxSongs ?? FREE_PLAN_LIMITS.songs;
+
+    if (!backendApi && tier === 'FREE' && songs.length >= maxSongs) {
+      throw new UpgradeGateError(
+        'SONG_LIMIT',
+        'You’ve reached 10 songs. Upgrade to keep building your library.',
+      );
+    }
+
     const draftSong: Song = {
       id: createId('song'),
       title: input?.title ?? 'Untitled Song',
       artist: input?.artist ?? 'Unknown Artist',
-      key: input?.key ?? 'C',
+      key: input?.key ?? 'E',
       feelNote: input?.feelNote ?? 'Mid-tempo pocket',
       tuning: input?.tuning ?? tuningOptions[0],
       updatedAt: new Date().toISOString(),
@@ -352,20 +433,57 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     return createdSong;
   };
 
+  const createSetlist = (name?: string): Setlist => {
+    const maxSetlists = capabilities.maxSetlists ?? FREE_PLAN_LIMITS.setlists;
+
+    if (!backendApi && tier === 'FREE' && setlists.length >= maxSetlists) {
+      throw new UpgradeGateError(
+        'SETLIST_LIMIT',
+        'Upgrade to create unlimited setlists for gigs and rehearsals.',
+      );
+    }
+
+    const label = name?.trim();
+    const nextSetlist: Setlist = {
+      id: createId('setlist'),
+      name: label && label.length > 0 ? label : `Setlist ${setlists.length + 1}`,
+      songIds: [],
+      updatedAt: new Date().toISOString(),
+    };
+
+    setSetlists((current) => [...current, nextSetlist]);
+    setActiveSetlistId(nextSetlist.id);
+
+    return nextSetlist;
+  };
+
+  const setActiveSetlist = (setlistId: string) => {
+    if (!setlists.some((item) => item.id === setlistId)) {
+      return;
+    }
+
+    setActiveSetlistId(setlistId);
+  };
+
   const deleteSong = (songId: string) => {
-    const syncState = { nextSongIds: [] as string[] };
+    let nextActiveSongIds: string[] = [];
 
     setSongs((current) => current.filter((song) => song.id !== songId));
-    setSetlist((current) => ({
-      ...current,
-      name: FREE_SETLIST_TITLE,
-      songIds: (() => {
-        const nextIds = current.songIds.filter((id) => id !== songId);
-        syncState.nextSongIds = nextIds;
-        return nextIds;
-      })(),
-      updatedAt: new Date().toISOString(),
-    }));
+    setSetlists((current) =>
+      current.map((currentSetlist) => {
+        const nextSongIds = currentSetlist.songIds.filter((id) => id !== songId);
+
+        if (currentSetlist.id === activeSetlistId) {
+          nextActiveSongIds = nextSongIds;
+        }
+
+        return {
+          ...currentSetlist,
+          songIds: nextSongIds,
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    );
 
     if (!backendApi) {
       return;
@@ -374,7 +492,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     void (async () => {
       try {
         await backendApi.deleteSong(songId);
-        await backendApi.replacePlaylistOrder({ songIds: syncState.nextSongIds });
+        await backendApi.replacePlaylistOrder({ songIds: nextActiveSongIds });
       } catch (error) {
         console.warn('BassTab backend deleteSong failed', error);
       }
@@ -398,11 +516,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
 
     const nextSongForSync = syncState.nextSongForSync;
 
-    if (!nextSongForSync) {
-      return;
-    }
-
-    if (!backendApi) {
+    if (!nextSongForSync || !backendApi) {
       return;
     }
 
@@ -460,11 +574,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
 
     const nextSongForSync = syncState.nextSongForSync;
 
-    if (!nextSongForSync) {
-      return;
-    }
-
-    if (!backendApi) {
+    if (!nextSongForSync || !backendApi) {
       return;
     }
 
@@ -480,7 +590,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       });
   };
 
-  const syncSetlistOrder = (songIds: string[], action: string) => {
+  const syncSetlistOrder = (songIds: string[], action: string, targetSetlistId = activeSetlistId) => {
     const availableSongIds = new Set(songs.map((song) => song.id));
     const uniqueSongIds: string[] = [];
 
@@ -492,21 +602,32 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       uniqueSongIds.push(songId);
     }
 
-    setSetlist((current) => ({
-      ...current,
-      name: FREE_SETLIST_TITLE,
-      songIds: uniqueSongIds,
-      updatedAt: new Date().toISOString(),
-    }));
+    setSetlists((current) =>
+      current.map((currentSetlist) =>
+        currentSetlist.id === targetSetlistId
+          ? {
+            ...currentSetlist,
+            songIds: uniqueSongIds,
+            updatedAt: new Date().toISOString(),
+          }
+          : currentSetlist,
+      ),
+    );
 
-    if (!backendApi) {
+    if (!backendApi || targetSetlistId !== activeSetlistId) {
       return;
     }
 
     void backendApi
       .replacePlaylistOrder({ songIds: uniqueSongIds })
       .then((playlistDto) => {
-        setSetlist(normalizeSetlist(fromPlaylistDto(playlistDto)));
+        const playlist = normalizeSetlist(fromPlaylistDto(playlistDto));
+
+        setSetlists((current) =>
+          current.map((currentSetlist) =>
+            currentSetlist.id === activeSetlistId ? playlist : currentSetlist,
+          ),
+        );
       })
       .catch((error) => {
         console.warn(`BassTab backend ${action} failed`, error);
@@ -593,17 +714,21 @@ export function BassTabProvider({ children }: PropsWithChildren) {
 
       const mapSongId = (songId: string) => createdByLocalId.get(songId)?.id ?? songId;
       const nextSongs = songs.map((song) => createdByLocalId.get(song.id) ?? song);
-      const nextSetlist = normalizeSetlist({
-        ...setlist,
-        songIds: setlist.songIds.map(mapSongId),
+      const nextSetlists = setlists.map((currentSetlist) => ({
+        ...currentSetlist,
+        songIds: currentSetlist.songIds.map(mapSongId),
         updatedAt: new Date().toISOString(),
-      });
+      }));
+      const activeSetlistForSync =
+        nextSetlists.find((currentSetlist) => currentSetlist.id === activeSetlistId) ??
+        nextSetlists[0] ??
+        normalizeSetlist(seededSetlist);
 
-      await backendApi.replacePlaylistOrder({ songIds: nextSetlist.songIds });
+      await backendApi.replacePlaylistOrder({ songIds: activeSetlistForSync.songIds });
 
       if (createdByLocalId.size > 0) {
         setSongs(nextSongs);
-        setSetlist(nextSetlist);
+        setSetlists(nextSetlists);
       }
 
       return backendStorageLabel;
@@ -614,6 +739,8 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       exportedAt: new Date().toISOString(),
       songs,
       setlist,
+      setlists,
+      activeSetlistId,
     };
 
     return saveSnapshotFile(snapshot);
@@ -628,7 +755,8 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     const nextState = parseSnapshot(await loadSnapshotFile());
 
     setSongs(nextState.songs);
-    setSetlist(normalizeSetlist(nextState.setlist));
+    setSetlists(nextState.setlists);
+    setActiveSetlistId(nextState.activeSetlistId);
 
     return stateStorageLabel;
   };
@@ -637,8 +765,12 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     () => ({
       songs,
       setlist,
+      setlists,
+      activeSetlistId,
       storageFileUri: stateStorageLabel,
       createSong,
+      createSetlist,
+      setActiveSetlist,
       deleteSong,
       updateSong,
       updateSongChart,
@@ -649,7 +781,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       saveStateToFile,
       loadStateFromFile,
     }),
-    [setlist, songs],
+    [activeSetlistId, setlist, setlists, songs],
   );
 
   return (

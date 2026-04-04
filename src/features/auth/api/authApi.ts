@@ -65,12 +65,17 @@ const parseUserDto = (value: unknown): UserDto => {
     asString(record.displayName) ??
     asString(record.name) ??
     (email ? email.split('@')[0] : null);
+  const subscriptionTierRaw = asString(record.subscriptionTier);
+  const subscriptionTier =
+    subscriptionTierRaw === 'FREE' || subscriptionTierRaw === 'PRO'
+      ? subscriptionTierRaw
+      : undefined;
 
   if (!id || !email || !displayName) {
     throw new Error('Invalid user payload.');
   }
 
-  return { id, email, displayName };
+  return { id, email, displayName, subscriptionTier };
 };
 
 export class AuthApiError extends Error {

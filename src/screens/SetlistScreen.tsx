@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -9,8 +9,8 @@ import { AppSectionNav } from '../components/AppSectionNav';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { palette } from '../constants/colors';
-import { FREE_SETLIST_TITLE } from '../constants/setlist';
 import { brandDisplayFontFamily } from '../constants/typography';
+import { resolveUpgradeTrigger, useSubscription, useUpgradePrompt } from '../features/subscription';
 import { RootStackParamList, TabParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { Song } from '../types/models';
@@ -21,7 +21,23 @@ type Props = CompositeScreenProps<
 >;
 
 export function SetlistScreen({ navigation }: Props) {
-  const { songs, setlist, addSongToSetlist, removeSongFromSetlist, moveSetlistSong } = useBassTab();
+  const { tier, capabilities } = useSubscription();
+  const { showUpgradePrompt } = useUpgradePrompt();
+  const {
+    songs,
+    setlist,
+    setlists,
+    activeSetlistId,
+    setActiveSetlist,
+    createSetlist,
+    addSongToSetlist,
+    removeSongFromSetlist,
+    moveSetlistSong,
+  } = useBassTab();
+  const [statusMessage, setStatusMessage] = useState(
+    'Build gig-ready running orders and keep transitions tight.',
+  );
+  const freeSetlistLimit = capabilities.maxSetlists ?? 1;
 
   const orderedSongs = useMemo(
     () =>
@@ -35,6 +51,23 @@ export function SetlistScreen({ navigation }: Props) {
     () => songs.filter((song) => !setlist.songIds.includes(song.id)),
     [setlist.songIds, songs],
   );
+
+  const handleCreateSetlist = () => {
+    try {
+      const created = createSetlist();
+      setStatusMessage(`Created ${created.name}.`);
+    } catch (error) {
+      const trigger = resolveUpgradeTrigger(error);
+
+      if (trigger) {
+        showUpgradePrompt(trigger);
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : 'Could not create setlist.';
+      setStatusMessage(message);
+    }
+  };
 
   const moveSong = (songId: string, direction: -1 | 1) => {
     moveSetlistSong(songId, direction);
@@ -52,27 +85,54 @@ export function SetlistScreen({ navigation }: Props) {
     <ScreenContainer contentStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>{FREE_SETLIST_TITLE}</Text>
+          <Text style={styles.title}>{setlist.name}</Text>
           <Text style={styles.subtitle}>
-            The free version keeps one running order for the whole night. Move songs fast and keep the set tight.
+            {tier === 'PRO'
+              ? 'Create as many setlists as you need for rehearsals and gigs.'
+              : `Free includes ${freeSetlistLimit} setlist${freeSetlistLimit === 1 ? '' : 's'}. Upgrade to unlock separate lists for every set.`}
           </Text>
         </View>
         <AppSectionNav
           current="Setlist"
+          onHome={() => navigation.navigate('Home')}
           onLibrary={() => navigation.navigate('Library')}
           onSetlist={() => navigation.navigate('Setlist')}
-          onAbout={() => navigation.navigate('Welcome')}
+          onImport={() => navigation.navigate('Import')}
+          onGoPro={() => navigation.navigate('Upgrade')}
         />
         <View style={styles.headerActions}>
+          <PrimaryButton
+            label="New Setlist"
+            onPress={handleCreateSetlist}
+            variant="secondary"
+          />
           {orderedSongs.length > 0 ? (
             <PrimaryButton
-              label="Export Multi-Page PDF"
+              label={tier === 'PRO' ? 'Export Multi-Page PDF' : 'Export Multi-Page PDF (PRO)'}
               onPress={() => navigation.navigate('ExportSetlist')}
               variant="ghost"
             />
           ) : null}
         </View>
+        <Text style={styles.statusText}>{statusMessage}</Text>
       </View>
+
+      {setlists.length > 0 ? (
+        <View style={styles.switcher}>
+          <Text style={styles.switcherLabel}>Setlists</Text>
+          <View style={styles.switcherOptions}>
+            {setlists.map((item) => (
+              <PrimaryButton
+                key={item.id}
+                label={item.name}
+                onPress={() => setActiveSetlist(item.id)}
+                variant={activeSetlistId === item.id ? 'primary' : 'ghost'}
+                size="compact"
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current Order</Text>
@@ -143,7 +203,7 @@ export function SetlistScreen({ navigation }: Props) {
         {availableSongs.length === 0 ? (
           <EmptyState
             title="No more songs to add"
-            description="Every library song is already in the setlist."
+            description="Every library song is already in this setlist."
           />
         ) : (
           availableSongs.map((song) => (
@@ -194,6 +254,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#4b5563',
+  },
+  statusText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: palette.textMuted,
+  },
+  switcher: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
+    padding: 14,
+    gap: 8,
+  },
+  switcherLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: palette.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  switcherOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   section: {
     gap: 12,
@@ -284,7 +369,6 @@ const styles = StyleSheet.create({
   },
   libraryMeta: {
     fontSize: 14,
-    lineHeight: 20,
     color: palette.textMuted,
   },
 });

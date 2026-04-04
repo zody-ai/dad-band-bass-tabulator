@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TabPagePreview } from '../components/TabPagePreview';
+import { TabPagePreview, TabPreviewRenderMode } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
+import { useSubscription, useUpgradePrompt } from '../features/subscription';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { flattenSongRowsToChart } from '../utils/songChart';
@@ -14,7 +15,10 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PerformanceView'>;
 
 export function LiveViewScreen({ route }: Props) {
   const { songId } = route.params;
+  const { capabilities } = useSubscription();
+  const { showUpgradePrompt } = useUpgradePrompt();
   const { songs } = useBassTab();
+  const [renderMode, setRenderMode] = useState<TabPreviewRenderMode>('ascii');
   const { width } = useWindowDimensions();
   const isPhone = width < 760;
   const isTablet = width >= 760 && width < 1100;
@@ -44,9 +48,19 @@ export function LiveViewScreen({ route }: Props) {
         rowBarCounts={chart.rowBarCounts}
         tone="dark"
         compact={useCompactPreview}
+        renderMode={renderMode}
       />
     );
-  }, [chart, useCompactPreview]);
+  }, [chart, renderMode, useCompactPreview]);
+
+  const handleRenderModeChange = (mode: TabPreviewRenderMode) => {
+    if (mode === 'svg' && !capabilities.svgEnabled) {
+      showUpgradePrompt('SVG_MODE');
+      return;
+    }
+
+    setRenderMode(mode);
+  };
 
   if (!song || !chart) {
     return (
@@ -90,6 +104,30 @@ export function LiveViewScreen({ route }: Props) {
                   ? 'Tablet stage view with a wider reading layout'
                   : 'Full song, A4 reading layout'}
             </Text>
+            <View style={styles.renderModeControl}>
+              <Text style={styles.renderModeLabel}>Render mode</Text>
+              <View style={styles.renderModeSelector}>
+                {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
+                  <Pressable
+                    key={mode}
+                    onPress={() => handleRenderModeChange(mode)}
+                    style={[
+                      styles.renderModeOption,
+                      renderMode === mode && styles.renderModeOptionActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.renderModeOptionText,
+                        renderMode === mode && styles.renderModeOptionTextActive,
+                      ]}
+                    >
+                      {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
           </View>
           <ScrollView
             horizontal
@@ -186,6 +224,42 @@ const styles = StyleSheet.create({
   pageSubheading: {
     fontSize: 14,
     color: palette.liveMuted,
+  },
+  renderModeControl: {
+    gap: 4,
+    marginTop: 4,
+  },
+  renderModeLabel: {
+    textTransform: 'uppercase',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    color: '#94a3b8',
+  },
+  renderModeSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  renderModeOption: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    backgroundColor: '#111827',
+  },
+  renderModeOptionActive: {
+    borderColor: '#93c5fd',
+    backgroundColor: '#1e293b',
+  },
+  renderModeOptionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#cbd5e1',
+  },
+  renderModeOptionTextActive: {
+    color: '#dbeafe',
   },
   pageCanvas: {
     borderRadius: 24,

@@ -1,11 +1,14 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { createBassTabApiFromEnv } from '../api';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { TabPagePreview } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
-import { FREE_SETLIST_TITLE } from '../constants/setlist';
 import { brandDisplayFontFamily } from '../constants/typography';
+import { resolveUpgradeTrigger, useSubscription } from '../features/subscription';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { Song } from '../types/models';
@@ -62,12 +65,71 @@ const printCss = `
   }
 `;
 
-export function SetlistExportScreen(_: Props) {
+export function SetlistExportScreen({ navigation }: Props) {
+  const { tier } = useSubscription();
+  const backendApi = useMemo(() => createBassTabApiFromEnv(), []);
   const { songs, setlist } = useBassTab();
+  const [isCheckingPdfAccess, setIsCheckingPdfAccess] = useState(Boolean(backendApi));
+  const [isPdfLocked, setIsPdfLocked] = useState(tier === 'FREE');
   useWebPrintStyles('setlist-export-print-styles', printCss);
   const orderedSongs = setlist.songIds
     .map((songId) => songs.find((song) => song.id === songId))
     .filter(Boolean) as Song[];
+  const firstSongId = orderedSongs[0]?.id;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkPdfAccess = async () => {
+      if (!firstSongId) {
+        if (isMounted) {
+          setIsCheckingPdfAccess(false);
+        }
+        return;
+      }
+
+      if (!backendApi) {
+        if (isMounted) {
+          setIsPdfLocked(tier === 'FREE');
+          setIsCheckingPdfAccess(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsCheckingPdfAccess(true);
+      }
+
+      try {
+        await backendApi.getSong(firstSongId, { mode: 'PDF' });
+
+        if (isMounted) {
+          setIsPdfLocked(false);
+        }
+      } catch (error) {
+        const trigger = resolveUpgradeTrigger(error);
+
+        if (isMounted) {
+          if (trigger === 'PDF_EXPORT') {
+            setIsPdfLocked(true);
+          } else {
+            console.warn('Setlist PDF export access check failed; falling back to local tier gate.', error);
+            setIsPdfLocked(tier === 'FREE');
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsCheckingPdfAccess(false);
+        }
+      }
+    };
+
+    void checkPdfAccess();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [backendApi, firstSongId, tier]);
 
   if (orderedSongs.length === 0) {
     return (
@@ -78,6 +140,71 @@ export function SetlistExportScreen(_: Props) {
             Add songs to the setlist before exporting a combined PDF.
           </Text>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isCheckingPdfAccess) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.lockedCard}>
+            <Text style={styles.lockedEyebrow}>Checking Access</Text>
+            <Text style={styles.lockedTitle}>Checking PDF export permission…</Text>
+            <Text style={styles.lockedSubtitle}>
+              One moment while we validate your export access.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (isPdfLocked) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.lockedCard}>
+            <Text style={styles.lockedEyebrow}>Pro Export</Text>
+            <Text style={styles.lockedTitle}>Setlist PDF export is a Pro feature</Text>
+            <Text style={styles.lockedSubtitle}>
+              No Internet at GIG - then export your tabs to your device.
+            </Text>
+
+            <View style={styles.teaserCard}>
+              <Text style={styles.teaserTitle}>{setlist.name}</Text>
+              <Text style={styles.teaserMeta}>
+                {orderedSongs.length} song{orderedSongs.length === 1 ? '' : 's'} ready
+              </Text>
+              <Text style={styles.teaserLabel}>Limited display</Text>
+              {orderedSongs.slice(0, 4).map((song, index) => (
+                <Text key={song.id} style={styles.teaserItem}>
+                  {index + 1}. {song.title}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.lockedActions}>
+              <PrimaryButton
+                label="Go Pro for PDF Export"
+                onPress={() => navigation.navigate('Upgrade')}
+              />
+              <PrimaryButton
+                label="Maybe Later"
+                onPress={() => navigation.goBack()}
+                variant="ghost"
+              />
+            </View>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -112,56 +239,56 @@ export function SetlistExportScreen(_: Props) {
         </View>
 
         <View nativeID="setlist-export-print-root" style={styles.printRoot}>
-        <View style={styles.setlistBanner}>
-          <Text style={styles.setlistTitle}>{FREE_SETLIST_TITLE}</Text>
-          <Text style={styles.setlistSubtitle}>
-            {orderedSongs.length} song{orderedSongs.length === 1 ? '' : 's'} in performance order, ready for an offline backup
-          </Text>
-        </View>
+          <View style={styles.setlistBanner}>
+            <Text style={styles.setlistTitle}>{setlist.name}</Text>
+            <Text style={styles.setlistSubtitle}>
+              {orderedSongs.length} song{orderedSongs.length === 1 ? '' : 's'} in performance order, ready for an offline backup
+            </Text>
+          </View>
 
-        {orderedSongs.map((song, index) => {
-          const chart = flattenSongRowsToChart(song);
-          const { stringNames, bars } = parseTab(chart.tab);
+          {orderedSongs.map((song, index) => {
+            const chart = flattenSongRowsToChart(song);
+            const { stringNames, bars } = parseTab(chart.tab);
 
-          return (
-            <View
-              nativeID={`setlist-export-page-${index}`}
-              key={song.id}
-              style={[
-                styles.pageSheet,
-                index < orderedSongs.length - 1 && styles.pageBreakSheet,
-              ]}
-            >
-              <View style={styles.pageHeader}>
-                <View style={styles.pageTitleRow}>
-                  <View style={styles.pageTitleBlock}>
-                    <Text style={styles.songTitle}>{song.title}</Text>
-                    <Text style={styles.songSubtitle}>{song.artist}</Text>
+            return (
+              <View
+                nativeID={`setlist-export-page-${index}`}
+                key={song.id}
+                style={[
+                  styles.pageSheet,
+                  index < orderedSongs.length - 1 && styles.pageBreakSheet,
+                ]}
+              >
+                <View style={styles.pageHeader}>
+                  <View style={styles.pageTitleRow}>
+                    <View style={styles.pageTitleBlock}>
+                      <Text style={styles.songTitle}>{song.title}</Text>
+                      <Text style={styles.songSubtitle}>{song.artist}</Text>
+                    </View>
+                    <View style={styles.orderBadge}>
+                      <Text style={styles.orderText}>{index + 1}</Text>
+                    </View>
                   </View>
-                  <View style={styles.orderBadge}>
-                    <Text style={styles.orderText}>{index + 1}</Text>
+
+                  <View style={styles.metaGrid}>
+                    <MetaPill label="Key" value={song.key} />
+                    <MetaPill label="Tuning" value={song.tuning} />
                   </View>
                 </View>
 
-                <View style={styles.metaGrid}>
-                  <MetaPill label="Key" value={song.key} />
-                  <MetaPill label="Tuning" value={song.tuning} />
+                <View style={styles.chartBody}>
+                  <TabPagePreview
+                    stringNames={stringNames}
+                    bars={bars}
+                    rowAnnotations={chart.rowAnnotations ?? []}
+                    rowBarCounts={chart.rowBarCounts}
+                    tone="light"
+                    compact
+                  />
                 </View>
               </View>
-
-              <View style={styles.chartBody}>
-                <TabPagePreview
-                  stringNames={stringNames}
-                  bars={bars}
-                  rowAnnotations={chart.rowAnnotations ?? []}
-                  rowBarCounts={chart.rowBarCounts}
-                  tone="light"
-                  compact
-                />
-              </View>
-            </View>
-          );
-        })}
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -336,6 +463,67 @@ const styles = StyleSheet.create({
   chartBody: {
     gap: 12,
   },
+  lockedCard: {
+    width: '100%',
+    maxWidth: 820,
+    borderRadius: 20,
+    padding: 20,
+    backgroundColor: '#0b0b0f',
+    borderWidth: 1,
+    borderColor: '#1f2937',
+    gap: 12,
+  },
+  lockedEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    color: '#f59e0b',
+  },
+  lockedTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '900',
+    color: '#f8fafc',
+  },
+  lockedSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#cbd5e1',
+  },
+  teaserCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+    backgroundColor: '#111827',
+    padding: 14,
+    gap: 6,
+  },
+  teaserTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#f8fafc',
+  },
+  teaserMeta: {
+    fontSize: 13,
+    color: '#94a3b8',
+  },
+  teaserLabel: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    color: '#f59e0b',
+  },
+  teaserItem: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#e2e8f0',
+  },
+  lockedActions: {
+    gap: 8,
+  },
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -346,15 +534,15 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#111827',
+    color: '#1f2937',
   },
   emptyText: {
-    fontSize: 17,
-    lineHeight: 25,
+    fontSize: 16,
+    lineHeight: 24,
     color: '#4b5563',
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.88,
+    opacity: 0.86,
   },
 });

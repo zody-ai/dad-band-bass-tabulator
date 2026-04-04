@@ -2,6 +2,7 @@ export interface UserDto {
   id: string;
   email: string;
   displayName: string;
+  subscriptionTier?: 'FREE' | 'PRO';
 }
 
 export interface SessionResponse {

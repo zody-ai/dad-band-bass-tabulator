@@ -23,6 +23,7 @@ import {
   renderTab,
   updateBarCell,
 } from '../utils/tabLayout';
+import { useSubscription, useUpgradePrompt } from '../features/subscription';
 import { PrimaryButton } from './PrimaryButton';
 import { TabPagePreview, TabPreviewRenderMode } from './TabPagePreview';
 
@@ -100,6 +101,8 @@ export function SectionEditorCard({
   onDelete,
 }: SectionEditorCardProps) {
   const { width } = useWindowDimensions();
+  const { capabilities } = useSubscription();
+  const { showUpgradePrompt } = useUpgradePrompt();
   const isPreviewCompact = width < 760;
   const isCompactLayout = width < 760;
   const [activeRowIndex, setActiveRowIndex] = useState(-1);
@@ -109,7 +112,13 @@ export function SectionEditorCard({
     annotation: TabRowAnnotation;
   } | null>(null);
   const [renderMode, setRenderMode] = useState<TabPreviewRenderMode>('ascii');
+  const [rowEditSnapshot, setRowEditSnapshot] = useState<{
+    tab: string;
+    rowAnnotations?: TabRowAnnotation[];
+    rowBarCounts?: number[];
+  } | null>(null);
   const inputRefs = useRef<Record<string, TextInput | null>>({});
+  const quickPreviewRenderMode: TabPreviewRenderMode = !capabilities.svgEnabled ? 'ascii' : renderMode;
 
   const { stringNames, bars } = useMemo(() => parseTab(section.tab), [section.tab]);
   const rowBarCounts = useMemo(
@@ -240,6 +249,33 @@ export function SectionEditorCard({
     if (key === 'Backspace' && !currentValue) {
       focusCell(rowIndex, stringIndex, globalSlotIndex - 1);
     }
+  };
+
+  const beginRowEdit = (rowIndex: number) => {
+    setRowEditSnapshot({
+      tab: section.tab,
+      rowAnnotations: section.rowAnnotations?.map((annotation) => ({ ...annotation })),
+      rowBarCounts: section.rowBarCounts ? [...section.rowBarCounts] : undefined,
+    });
+    setActiveRowIndex(rowIndex);
+  };
+
+  const handleSaveRowEdit = () => {
+    setActiveRowIndex(-1);
+    setRowEditSnapshot(null);
+  };
+
+  const handleCancelRowEdit = () => {
+    if (rowEditSnapshot) {
+      onChange({
+        tab: rowEditSnapshot.tab,
+        rowAnnotations: rowEditSnapshot.rowAnnotations,
+        rowBarCounts: rowEditSnapshot.rowBarCounts,
+      });
+    }
+
+    setActiveRowIndex(-1);
+    setRowEditSnapshot(null);
   };
 
   return (
@@ -514,7 +550,7 @@ export function SectionEditorCard({
                         >
                           <PrimaryButton
                             label="Edit"
-                            onPress={() => setActiveRowIndex(row.rowIndex)}
+                            onPress={() => beginRowEdit(row.rowIndex)}
                             variant="ghost"
                             style={[
                               styles.sidebarButtonWide,
@@ -609,7 +645,8 @@ export function SectionEditorCard({
                       bars={bars}
                       rowBarCounts={rowBarCounts}
                       inputRefs={inputRefs}
-                      onSelectRow={setActiveRowIndex}
+                      onSave={handleSaveRowEdit}
+                      onCancel={handleCancelRowEdit}
                       onRowAnnotationChange={updateRowAnnotation}
                       onBarsChange={commitBars}
                       onChartChange={commitChart}
@@ -641,6 +678,11 @@ export function SectionEditorCard({
                     ? 'Scroll sideways to view the full chart'
                     : 'Current A4 output'}
                 </Text>
+                {!capabilities.svgEnabled ? (
+                  <Text style={styles.quickPreviewUpgradeNote}>
+                    Quick Preview stays ASCII on Free. Go Pro to unlock SVG for stage use.
+                  </Text>
+                ) : null}
               </View>
               {!isPreviewCompact ? (
                 <PrimaryButton
@@ -670,7 +712,7 @@ export function SectionEditorCard({
                       rowAnnotations={rowAnnotations}
                       rowBarCounts={rowBarCounts}
                       compact={isPreviewCompact}
-                      renderMode={renderMode}
+                      renderMode={quickPreviewRenderMode}
                     />
                   </View>
                 </ScrollView>
@@ -678,6 +720,13 @@ export function SectionEditorCard({
             </ScrollView>
             {isPreviewCompact ? (
               <View style={styles.previewFooterActions}>
+                {!capabilities.svgEnabled ? (
+                  <PrimaryButton
+                    label="Go Pro for SVG Stage View"
+                    onPress={() => showUpgradePrompt('SVG_MODE')}
+                    variant="ghost"
+                  />
+                ) : null}
                 <PrimaryButton
                   label="Close Preview"
                   onPress={() => setPreviewVisible(false)}
@@ -705,7 +754,8 @@ interface RowEditorProps {
   bars: ReturnType<typeof parseTab>['bars'];
   rowBarCounts: number[];
   inputRefs: MutableRefObject<Record<string, TextInput | null>>;
-  onSelectRow: (rowIndex: number) => void;
+  onSave: () => void;
+  onCancel: () => void;
   onRowAnnotationChange: (
     rowIndex: number,
     field: keyof TabRowAnnotation,
@@ -740,7 +790,8 @@ function RowEditor({
   bars,
   rowBarCounts,
   inputRefs,
-  onSelectRow,
+  onSave,
+  onCancel,
   onRowAnnotationChange,
   onBarsChange,
   onChartChange,
@@ -999,11 +1050,20 @@ function RowEditor({
               : `Bars ${row.startBarIndex + 1}-${row.startBarIndex + row.bars.length}. Dense grid for faster entry.`}
           </Text>
         </View>
-        <PrimaryButton
-          label="Back"
-          onPress={() => onSelectRow(-1)}
-          variant="secondary"
-        />
+        <View style={styles.activeRowActions}>
+          <PrimaryButton
+            label="Cancel"
+            onPress={onCancel}
+            variant="ghost"
+            size="compact"
+          />
+          <PrimaryButton
+            label="Save"
+            onPress={onSave}
+            variant="secondary"
+            size="compact"
+          />
+        </View>
       </View>
 
       <Field
@@ -2062,6 +2122,11 @@ const styles = StyleSheet.create({
   pageSubheading: {
     fontSize: 12,
     color: '#94a3b8',
+  },
+  quickPreviewUpgradeNote: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#9a3412',
   },
   previewOverlay: {
     ...StyleSheet.absoluteFillObject,

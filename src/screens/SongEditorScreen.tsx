@@ -8,6 +8,7 @@ import { SectionEditorCard } from '../components/SectionEditorCard';
 import { SongMetaFields } from '../components/SongMetaFields';
 import { palette } from '../constants/colors';
 import { brandDisplayFontFamily } from '../constants/typography';
+import { useSubscription } from '../features/subscription';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { Song } from '../types/models';
@@ -18,6 +19,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SongEditor'>;
 
 export function SongEditorScreen({ navigation, route }: Props) {
   const { songId } = route.params;
+  const { tier } = useSubscription();
   const { songs, updateSong, updateSongChart } = useBassTab();
 
   const song = songs.find((item) => item.id === songId);
@@ -68,7 +70,7 @@ export function SongEditorScreen({ navigation, route }: Props) {
             variant="secondary"
           />
           <PrimaryButton
-            label="Export Song PDF"
+            label={tier === 'PRO' ? 'Export Song PDF' : 'Export Song PDF (PRO)'}
             onPress={() => navigation.navigate('ExportSong', { songId: song.id })}
             variant="ghost"
           />

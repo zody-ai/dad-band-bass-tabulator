@@ -6,6 +6,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { palette } from '../constants/colors';
 import { brandDisplayFontFamily } from '../constants/typography';
+import { resolveUpgradeTrigger, useUpgradePrompt } from '../features/subscription';
 import { RootStackParamList } from '../navigation/types';
 import { useBassTab } from '../store/BassTabProvider';
 import { createId } from '../utils/ids';
@@ -20,6 +21,7 @@ A|7-7-7---5-5-5---|
 E|----------------|`;
 
 export function ImportPasteScreen({ navigation }: Props) {
+  const { showUpgradePrompt } = useUpgradePrompt();
   const { createSong, updateSong } = useBassTab();
   const [title, setTitle] = useState('Pasted Tab Draft');
   const [artist, setArtist] = useState('Unknown Artist');
@@ -45,6 +47,13 @@ export function ImportPasteScreen({ navigation }: Props) {
 
       navigation.replace('SongEditor', { songId: song.id });
     } catch (error) {
+      const trigger = resolveUpgradeTrigger(error);
+
+      if (trigger) {
+        showUpgradePrompt(trigger);
+        return;
+      }
+
       console.warn('Could not create pasted draft song', error);
     }
   };

@@ -10,7 +10,7 @@ export function WelcomeScreen({ navigation }: Props) {
     <WelcomeExperience
       actionLabel="Open Library"
       secondaryActionLabel="Open Setlist"
-      footerText="Dad Band Bass welcome screen for the free single-setlist version."
+      footerText="BassTab welcome screen."
       onPrimaryAction={() => navigation.navigate('MainTabs', { screen: 'Library' })}
       onSecondaryAction={() => navigation.navigate('MainTabs', { screen: 'Setlist' })}
     />

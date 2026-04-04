@@ -32,6 +32,8 @@ export interface Song {
   feelNote: string;
   tuning: string;
   updatedAt: string;
+  releasedToCommunity?: boolean;
+  communityReleasedAt?: string | null;
   stringNames: string[];
   rows: SongRow[];
 }

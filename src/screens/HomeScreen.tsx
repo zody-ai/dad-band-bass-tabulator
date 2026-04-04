@@ -4,21 +4,23 @@ import { WelcomeExperience } from '../components/WelcomeExperience';
 import { useSubscription } from '../features/subscription';
 import { RootStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Landing'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-export function LandingScreen({ navigation }: Props) {
+export function HomeScreen({ navigation }: Props) {
   const { tier, priceLabel } = useSubscription();
   const isPro = tier === 'PRO';
 
   return (
     <WelcomeExperience
       actionLabel="Open App"
-      onPrimaryAction={() => navigation.replace('MainTabs')}
+      secondaryActionLabel={isPro ? 'Open Account' : 'Go Pro'}
+      onPrimaryAction={() => navigation.navigate('MainTabs', { screen: 'Library' })}
+      onSecondaryAction={() => navigation.navigate(isPro ? 'Account' : 'Upgrade')}
       subscriptionPromo={{
         title: isPro ? 'Pro Unlocked for Every Gig' : 'Play Without Limits',
         subtitle: isPro
-          ? 'You are ready for stage mode, export, and full library access.'
-          : 'Unlock the full BassTab performance flow and keep every chart ready on stage.',
+          ? 'You have full performance access across library, setlists, and export.'
+          : 'Unlock stage-ready tools built for rehearsals, pub gigs, and no-signal venues.',
         priceLabel,
         benefits: [
           'Unlimited songs and setlists',

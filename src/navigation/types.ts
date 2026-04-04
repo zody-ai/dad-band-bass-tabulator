@@ -10,8 +10,11 @@ export type RootStackParamList = {
   AuthRestoring: undefined;
   AuthEntry: undefined;
   AuthCallback: { token?: string } | undefined;
+  Home: undefined;
   Landing: undefined;
   Welcome: undefined;
+  Account: undefined;
+  Upgrade: undefined;
   MainTabs: NavigatorScreenParams<TabParamList> | undefined;
   SongEditor: { songId: string };
   PerformanceView: { songId: string; sectionIndex?: number };

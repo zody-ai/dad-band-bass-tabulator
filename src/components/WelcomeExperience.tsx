@@ -42,6 +42,15 @@ interface WelcomeExperienceProps {
   footerText?: string;
   onPrimaryAction: () => void;
   onSecondaryAction?: () => void;
+  subscriptionPromo?: {
+    title: string;
+    subtitle: string;
+    priceLabel?: string;
+    benefits: string[];
+    ctaLabel: string;
+    onCta: () => void;
+    note?: string;
+  };
 }
 
 export function WelcomeExperience({
@@ -50,6 +59,7 @@ export function WelcomeExperience({
   footerText,
   onPrimaryAction,
   onSecondaryAction,
+  subscriptionPromo,
 }: WelcomeExperienceProps) {
   const { width } = useWindowDimensions();
   const isWide = width >= 980;
@@ -92,7 +102,7 @@ export function WelcomeExperience({
                 {headline}
               </Text>
               <Text style={[styles.subtitle, isNarrow && styles.subtitleNarrow]}>
-                Keep one no-nonsense setlist, tidy up bass charts fast, and get a clean stage view for pub gigs, church runs, and Saturday dad-band rehearsals.
+                Build rehearsal-ready setlists, tidy up bass charts fast, and keep a clean stage view for pub gigs, church runs, and Saturday band rehearsals.
               </Text>
 
               <View style={styles.vibeRow}>
@@ -131,41 +141,8 @@ export function WelcomeExperience({
                     <Text style={styles.secondaryActionButtonLabel}>{secondaryActionLabel}</Text>
                   </Pressable>
                 ) : null}
-                <View style={[styles.secondaryCallout, isNarrow && styles.secondaryCalloutNarrow]}>
-                  <Text style={styles.secondaryCalloutLabel}>One setlist. Quick fixes. Big pocket energy.</Text>
-                </View>
               </View>
 
-              <Pressable
-                onPress={() => {}}
-                style={({ pressed }) => [
-                  styles.supportWidget,
-                  isNarrow && styles.supportWidgetNarrow,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.supportWidgetArt}>
-                  <View style={[styles.moneyBag, styles.moneyBagBack]}>
-                    <Text style={styles.moneyBagLabel}>£</Text>
-                  </View>
-                  <View style={styles.moneyBag}>
-                    <Text style={styles.moneyBagLabel}>£</Text>
-                  </View>
-                  <View style={styles.pintGlass}>
-                    <View style={styles.pintFoam} />
-                    <View style={styles.pintBody} />
-                  </View>
-                </View>
-                <View style={styles.supportWidgetCopy}>
-                  <Text style={styles.supportWidgetTitle}>Keep The Bass Funded</Text>
-                  <Text style={styles.supportWidgetText}>
-                    If Dad Band Bass saves the set, sling a pint into the rehearsal kitty.
-                  </Text>
-                </View>
-                <View style={styles.supportWidgetButton}>
-                  <Text style={styles.supportWidgetButtonLabel}>Buy Me a Pint</Text>
-                </View>
-              </Pressable>
             </View>
           </View>
 
@@ -186,12 +163,53 @@ export function WelcomeExperience({
           <FeatureCard
             title="Offline PDF Backup"
             description="No signal at the gig? Export a PDF before you leave and keep the chart on your device."
+            pillLabel="Pro only"
           />
           <FeatureCard
             title="Quick Tab Cleanup"
             description="Take rough bass tab, tidy it up fast, and make it readable before rehearsal or soundcheck."
           />
         </View>
+
+        {subscriptionPromo ? (
+          <View style={[styles.proCard, isNarrow && styles.proCardNarrow]}>
+            <View style={styles.proHeader}>
+              <Text style={styles.proEyebrow}>Go Pro</Text>
+              <Text style={styles.proTitle}>{subscriptionPromo.title}</Text>
+              <Text style={styles.proSubtitle}>{subscriptionPromo.subtitle}</Text>
+            </View>
+
+            <View style={styles.proBenefits}>
+              {subscriptionPromo.benefits.map((benefit) => (
+                <View key={benefit} style={styles.proBenefitPill}>
+                  <Text style={styles.proBenefitLabel}>{benefit}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={[styles.proActions, isNarrow && styles.proActionsNarrow]}>
+              <Pressable
+                onPress={subscriptionPromo.onCta}
+                style={({ pressed }) => [
+                  styles.proCtaButton,
+                  isNarrow && styles.proCtaButtonNarrow,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.proCtaLabel}>{subscriptionPromo.ctaLabel}</Text>
+              </Pressable>
+              <Text style={styles.proPriceText}>
+                {subscriptionPromo.priceLabel
+                  ? `${subscriptionPromo.priceLabel}/month`
+                  : '£4.99/month'}
+              </Text>
+            </View>
+
+            {subscriptionPromo.note ? (
+              <Text style={styles.proNote}>{subscriptionPromo.note}</Text>
+            ) : null}
+          </View>
+        ) : null}
 
         <Text style={styles.footer}>
           {footerText ??
@@ -250,14 +268,21 @@ function VibePill({ label }: { label: string }) {
 function FeatureCard({
   title,
   description,
+  pillLabel,
 }: {
   title: string;
   description: string;
+  pillLabel?: string;
 }) {
   return (
     <View style={styles.featureCard}>
       <Text style={styles.featureTitle}>{title}</Text>
       <Text style={styles.featureDescription}>{description}</Text>
+      {pillLabel ? (
+        <View style={styles.featurePill}>
+          <Text style={styles.featurePillLabel}>{pillLabel}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -553,134 +578,6 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.88,
   },
-  secondaryCallout: {
-    minHeight: 52,
-    maxWidth: 340,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: 'rgba(120, 53, 15, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(120, 53, 15, 0.1)',
-  },
-  secondaryCalloutNarrow: {
-    maxWidth: undefined,
-  },
-  secondaryCalloutLabel: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '700',
-    color: '#7c2d12',
-  },
-  supportWidget: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff7ed',
-    borderWidth: 1,
-    borderColor: '#f59e0b',
-  },
-  supportWidgetNarrow: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: 12,
-  },
-  supportWidgetArt: {
-    width: 108,
-    minHeight: 72,
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moneyBag: {
-    position: 'absolute',
-    left: 6,
-    bottom: 6,
-    width: 34,
-    height: 40,
-    borderRadius: 16,
-    backgroundColor: '#22c55e',
-    borderWidth: 2,
-    borderColor: '#166534',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moneyBagBack: {
-    left: 24,
-    bottom: 18,
-    transform: [{ rotate: '10deg' }],
-    opacity: 0.92,
-  },
-  moneyBagLabel: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#052e16',
-  },
-  pintGlass: {
-    position: 'absolute',
-    right: 10,
-    bottom: 2,
-    width: 34,
-    height: 56,
-    alignItems: 'center',
-  },
-  pintFoam: {
-    width: 36,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: '#fff7ed',
-    borderWidth: 1,
-    borderColor: '#d6d3d1',
-    marginBottom: -2,
-    zIndex: 1,
-  },
-  pintBody: {
-    width: 30,
-    height: 48,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    backgroundColor: '#f59e0b',
-    borderWidth: 2,
-    borderColor: '#92400e',
-  },
-  supportWidgetCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  supportWidgetTitle: {
-    fontSize: 17,
-    fontWeight: '900',
-    color: '#7c2d12',
-  },
-  supportWidgetText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#9a3412',
-  },
-  supportWidgetButton: {
-    minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: '#fbbf24',
-    borderWidth: 2,
-    borderColor: '#92400e',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  supportWidgetButtonLabel: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#78350f',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
   featureGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -711,6 +608,115 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#4b5563',
+  },
+  featurePill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#0f172a',
+  },
+  featurePillLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: '#bfdbfe',
+  },
+  proCard: {
+    borderRadius: 28,
+    padding: 20,
+    gap: 14,
+    backgroundColor: '#0b0b0f',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.28)',
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  proCardNarrow: {
+    borderRadius: 24,
+    padding: 16,
+    gap: 12,
+  },
+  proHeader: {
+    gap: 4,
+  },
+  proEyebrow: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: '#7dd3fc',
+  },
+  proTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '800',
+    fontFamily: brandDisplayFontFamily,
+    color: '#f8fafc',
+  },
+  proSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#cbd5e1',
+  },
+  proBenefits: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  proBenefitPill: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(56, 189, 248, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(125, 211, 252, 0.35)',
+  },
+  proBenefitLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#e0f2fe',
+  },
+  proActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  proActionsNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  proCtaButton: {
+    minHeight: 50,
+    borderRadius: 18,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#f59e0b',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proCtaButtonNarrow: {
+    width: '100%',
+  },
+  proCtaLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1f2937',
+  },
+  proPriceText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#f8fafc',
+  },
+  proNote: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#93c5fd',
   },
   footer: {
     fontSize: 14,

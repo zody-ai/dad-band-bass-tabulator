@@ -1,11 +1,19 @@
 import {
+  CommunitySavedSongDto,
   CreateSongRequestDto,
+  MockUpgradeRequestDto,
   parsePlaylistDto,
+  parseCommunitySavedSongsDto,
+  parseSubscriptionPricingDto,
+  parseSubscriptionSnapshotDto,
   parseSongChartDto,
   parseSongDto,
   parseSongMetadataDto,
   parseSongMetadataListDto,
   PlaylistDto,
+  SaveCommunitySongRequestDto,
+  SubscriptionPricingDto,
+  SubscriptionSnapshotDto,
   ReplacePlaylistOrderRequestDto,
   ReplaceSongChartRequestDto,
   SongChartDto,
@@ -16,18 +24,34 @@ import {
 
 export interface BassTabApi {
   listSongs(): Promise<SongMetadataDto[]>;
-  getSong(songId: string): Promise<SongDto>;
+  getSong(songId: string, options?: { mode?: 'PDF' }): Promise<SongDto>;
+  listCommunitySongs(): Promise<SongMetadataDto[]>;
+  getCommunitySong(songId: string): Promise<SongDto>;
   createSong(payload: CreateSongRequestDto): Promise<SongDto>;
   updateSongMetadata(songId: string, payload: UpdateSongMetadataRequestDto): Promise<SongMetadataDto>;
+  releaseSongToCommunity(songId: string): Promise<void>;
+  unreleaseSongFromCommunity(songId: string): Promise<void>;
   replaceSongChart(songId: string, payload: ReplaceSongChartRequestDto): Promise<SongChartDto>;
   deleteSong(songId: string): Promise<void>;
   getPlaylist(): Promise<PlaylistDto>;
   replacePlaylistOrder(payload: ReplacePlaylistOrderRequestDto): Promise<PlaylistDto>;
+  getSubscription(): Promise<SubscriptionSnapshotDto>;
+  getSubscriptionPricing(): Promise<SubscriptionPricingDto>;
+  mockUpgrade(payload: MockUpgradeRequestDto): Promise<SubscriptionSnapshotDto>;
+  mockDowngrade(): Promise<SubscriptionSnapshotDto>;
+  listSavedCommunitySongs(): Promise<CommunitySavedSongDto[]>;
+  saveCommunitySong(payload: SaveCommunitySongRequestDto): Promise<CommunitySavedSongDto>;
 }
 
 export interface BassTabApiClientOptions {
   baseUrl: string;
   fetchImpl?: typeof fetch;
+}
+
+interface ApiErrorPayload {
+  error?: string;
+  code?: string;
+  message?: string;
 }
 
 const jsonHeaders = {
@@ -61,8 +85,17 @@ export class HttpBassTabApi implements BassTabApi {
     return this.request('/v1/songs', { method: 'GET' }, parseSongMetadataListDto);
   }
 
-  async getSong(songId: string): Promise<SongDto> {
-    return this.request(`/v1/songs/${encodeURIComponent(songId)}`, { method: 'GET' }, parseSongDto);
+  async getSong(songId: string, options?: { mode?: 'PDF' }): Promise<SongDto> {
+    const query = options?.mode ? `?mode=${encodeURIComponent(options.mode)}` : '';
+    return this.request(`/v1/songs/${encodeURIComponent(songId)}${query}`, { method: 'GET' }, parseSongDto);
+  }
+
+  async listCommunitySongs(): Promise<SongMetadataDto[]> {
+    return this.request('/v1/community/songs', { method: 'GET' }, parseSongMetadataListDto);
+  }
+
+  async getCommunitySong(songId: string): Promise<SongDto> {
+    return this.request(`/v1/community/songs/${encodeURIComponent(songId)}`, { method: 'GET' }, parseSongDto);
   }
 
   async createSong(payload: CreateSongRequestDto): Promise<SongDto> {
@@ -89,6 +122,30 @@ export class HttpBassTabApi implements BassTabApi {
         body: JSON.stringify(payload),
       },
       parseSongMetadataDto,
+    );
+  }
+
+  async releaseSongToCommunity(songId: string): Promise<void> {
+    await this.request(
+      `/v1/songs/${encodeURIComponent(songId)}/community/release`,
+      {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({}),
+      },
+      () => undefined,
+    );
+  }
+
+  async unreleaseSongFromCommunity(songId: string): Promise<void> {
+    await this.request(
+      `/v1/songs/${encodeURIComponent(songId)}/community/unrelease`,
+      {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({}),
+      },
+      () => undefined,
     );
   }
 
@@ -124,6 +181,57 @@ export class HttpBassTabApi implements BassTabApi {
     );
   }
 
+  async getSubscription(): Promise<SubscriptionSnapshotDto> {
+    return this.request('/v1/subscription', { method: 'GET' }, parseSubscriptionSnapshotDto);
+  }
+
+  async getSubscriptionPricing(): Promise<SubscriptionPricingDto> {
+    return this.request('/v1/subscription/pricing', { method: 'GET' }, parseSubscriptionPricingDto);
+  }
+
+  async mockUpgrade(payload: MockUpgradeRequestDto): Promise<SubscriptionSnapshotDto> {
+    return this.request(
+      '/v1/subscription/mock-upgrade',
+      {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+      },
+      parseSubscriptionSnapshotDto,
+    );
+  }
+
+  async mockDowngrade(): Promise<SubscriptionSnapshotDto> {
+    return this.request(
+      '/v1/subscription/mock-downgrade',
+      {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({}),
+      },
+      parseSubscriptionSnapshotDto,
+    );
+  }
+
+  async listSavedCommunitySongs(): Promise<CommunitySavedSongDto[]> {
+    return this.request('/v1/community/saved', { method: 'GET' }, parseCommunitySavedSongsDto);
+  }
+
+  async saveCommunitySong(payload: SaveCommunitySongRequestDto): Promise<CommunitySavedSongDto> {
+    return this.request(
+      '/v1/community/saved',
+      {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+      },
+      (value) => {
+        const parsed = parseCommunitySavedSongsDto([value]);
+        return parsed[0];
+      },
+    );
+  }
+
   private async request<T>(
     path: string,
     init: RequestInit,
@@ -147,15 +255,45 @@ export class HttpBassTabApi implements BassTabApi {
 
     if (!response.ok) {
       let errorDetail = '';
+      let payload: ApiErrorPayload | null = null;
 
       try {
-        errorDetail = await response.text();
+        const text = await response.text();
+        errorDetail = text;
+
+        if (text) {
+          try {
+            const parsed = JSON.parse(text) as unknown;
+
+            if (parsed && typeof parsed === 'object') {
+              const record = parsed as Record<string, unknown>;
+              payload = {
+                error: typeof record.error === 'string' ? record.error : undefined,
+                code: typeof record.code === 'string' ? record.code : undefined,
+                message: typeof record.message === 'string' ? record.message : undefined,
+              };
+
+              if (payload.message) {
+                errorDetail = payload.message;
+              } else if (payload.error && payload.code) {
+                errorDetail = `${payload.error} (${payload.code})`;
+              }
+            }
+          } catch (_error) {
+            // Keep text as-is when response body isn't JSON.
+          }
+        }
       } catch (_error) {
-        errorDetail = '';
+        errorDetail = errorDetail || '';
       }
 
       const detailSuffix = errorDetail ? ` - ${errorDetail}` : '';
-      throw new Error(`BassTab API ${response.status} ${response.statusText}${detailSuffix}`);
+      throw new BassTabApiError(
+        `BassTab API ${response.status} ${response.statusText}${detailSuffix}`,
+        response.status,
+        payload?.error,
+        payload?.code,
+      );
     }
 
     if (response.status === 204) {
@@ -163,6 +301,20 @@ export class HttpBassTabApi implements BassTabApi {
     }
 
     return parse(await response.json());
+  }
+}
+
+export class BassTabApiError extends Error {
+  readonly status: number;
+  readonly errorType?: string;
+  readonly code?: string;
+
+  constructor(message: string, status: number, errorType?: string, code?: string) {
+    super(message);
+    this.name = 'BassTabApiError';
+    this.status = status;
+    this.errorType = errorType;
+    this.code = code;
   }
 }
 
