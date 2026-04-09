@@ -19,6 +19,7 @@ import { getAuthRouteMode } from '../features/auth/state/authReducer';
 import { useAuth } from '../features/auth/state/useAuth';
 import { AccountScreen } from '../screens/AccountScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { AISongCreationScreen } from '../screens/AISongCreationScreen';
 import { ImportDetailScreen } from '../screens/ImportDetailScreen';
 import { ImportPasteScreen } from '../screens/ImportPasteScreen';
 import { ImportScreen } from '../screens/ImportScreen';
@@ -81,6 +82,16 @@ function MainTabs() {
           tabBarLabel: 'Community',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="AICreate"
+        component={AISongCreationScreen}
+        options={{
+          tabBarLabel: 'AI Create',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="sparkles-outline" color={color} size={size} />
           ),
         }}
       />

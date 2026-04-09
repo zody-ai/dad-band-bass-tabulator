@@ -5,7 +5,6 @@ export interface SongMetadataDto {
   title: string;
   artist: string;
   key: string;
-  feelNote: string;
   tuning: string;
   updatedAt: string;
   stringCount: number;
@@ -32,7 +31,6 @@ export interface CreateSongRequestDto {
   title: string;
   artist: string;
   key: string;
-  feelNote: string;
   tuning: string;
   chart: SongChartDto;
   stringCount: number;
@@ -42,13 +40,17 @@ export interface UpdateSongMetadataRequestDto {
   title?: string;
   artist?: string;
   key?: string;
-  feelNote?: string;
   tuning?: string;
   stringCount?: number;
 }
 
 export interface ReplaceSongChartRequestDto {
   chart: SongChartDto;
+}
+
+export interface AiGenerateSongRequestDto {
+  artist: string;
+  title: string;
 }
 
 export interface ReplacePlaylistOrderRequestDto {
@@ -165,7 +167,6 @@ export interface CommunitySongCardDto {
   artist: string;
   key?: string | null;
   tuning?: string | null;
-  feelNote?: string | null;
   author?: CommunitySongAuthorDto;
   votes: CommunitySongVotesDto;
   publishedAt: string;
@@ -242,7 +243,6 @@ const isSongMetadataDto = (value: unknown): value is SongMetadataDto => {
     typeof value.title === 'string' &&
     typeof value.artist === 'string' &&
     typeof value.key === 'string' &&
-    typeof value.feelNote === 'string' &&
     typeof value.tuning === 'string' &&
     typeof value.updatedAt === 'string' &&
     typeof value.stringCount === 'number'
@@ -442,7 +442,6 @@ const toCommunitySongCardDto = (value: unknown): CommunitySongCardDto => {
     typeof value.artist !== 'string' ||
     !isNullableSongMeta(value.key) ||
     !isNullableSongMeta(value.tuning) ||
-    !isNullableSongMeta(value.feelNote) ||
     !isNullableCommunitySongAuthorDto(value.author) ||
     typeof value.publishedAt !== 'string' ||
     typeof value.updatedAt !== 'string' ||
@@ -488,7 +487,6 @@ const toCommunitySongCardDto = (value: unknown): CommunitySongCardDto => {
     artist: value.artist,
     key: isNullableSongMeta(value.key) ? value.key : null,
     tuning: isNullableSongMeta(value.tuning) ? value.tuning : null,
-    feelNote: isNullableSongMeta(value.feelNote) ? value.feelNote : null,
     author,
     votes,
     publishedAt: value.publishedAt,
@@ -589,12 +587,73 @@ export const parseSongChartDto = (value: unknown): SongChartDto => {
   return value;
 };
 
+const normalizeSongBar = (value: unknown): SongBar | null => {
+  if (!isRecord(value) || !isRecord(value.cells)) {
+    return null;
+  }
+
+  const cells: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(value.cells)) {
+    cells[k] = isStringArray(v) ? v : [];
+  }
+
+  return {
+    cells,
+    ...(typeof value.note === 'string' ? { note: value.note } : {}),
+    ...(typeof value.beatCount === 'number' ? { beatCount: value.beatCount } : {}),
+  };
+};
+
+const normalizeSongRow = (value: unknown): SongRow | null => {
+  if (!isRecord(value) || typeof value.id !== 'string') {
+    return null;
+  }
+
+  const bars = Array.isArray(value.bars)
+    ? (value.bars.map(normalizeSongBar).filter(Boolean) as SongBar[])
+    : [];
+
+  return {
+    id: value.id,
+    label: typeof value.label === 'string' ? value.label : '',
+    beforeText: typeof value.beforeText === 'string' ? value.beforeText : '',
+    afterText: typeof value.afterText === 'string' ? value.afterText : '',
+    bars,
+    ...(typeof value.defaultBeatCount === 'number' ? { defaultBeatCount: value.defaultBeatCount } : {}),
+  };
+};
+
 export const parseSongDto = (value: unknown): SongDto => {
-  if (!isSongDto(value)) {
+  if (!isRecord(value) || typeof value.id !== 'string') {
     throw new Error('Invalid song response payload.');
   }
 
-  return value;
+  const chart = value.chart;
+  if (!isRecord(chart)) {
+    throw new Error('Invalid song response payload.');
+  }
+
+  const stringNames = isStringArray(chart.stringNames) ? chart.stringNames : [];
+  const rows = Array.isArray(chart.rows)
+    ? (chart.rows.map(normalizeSongRow).filter(Boolean) as SongRow[])
+    : [];
+  const resolvedStringCount =
+    typeof value.stringCount === 'number'
+      ? value.stringCount
+      : stringNames.length || 4;
+
+  return {
+    id: value.id,
+    title: typeof value.title === 'string' ? value.title : '',
+    artist: typeof value.artist === 'string' ? value.artist : '',
+    key: typeof value.key === 'string' ? value.key : 'E',
+    tuning: typeof value.tuning === 'string' ? value.tuning : 'EADG',
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : new Date().toISOString(),
+    stringCount: resolvedStringCount,
+    importedPublishedSongId:
+      typeof value.importedPublishedSongId === 'string' ? value.importedPublishedSongId : null,
+    chart: { stringNames, rows },
+  };
 };
 
 export const parsePlaylistDto = (value: unknown): PlaylistDto => {

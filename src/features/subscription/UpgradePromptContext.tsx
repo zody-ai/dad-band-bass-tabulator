@@ -1,6 +1,7 @@
-import { PropsWithChildren, createContext, useContext, useMemo, useState } from 'react';
+import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import { UpgradeModal } from '../../components/UpgradeModal';
+import { useSubscription } from './SubscriptionContext';
 import { UpgradeTrigger } from './subscriptionTypes';
 
 interface UpgradePromptContextValue {
@@ -11,7 +12,14 @@ interface UpgradePromptContextValue {
 const UpgradePromptContext = createContext<UpgradePromptContextValue | undefined>(undefined);
 
 export function UpgradePromptProvider({ children }: PropsWithChildren) {
+  const { tier } = useSubscription();
   const [activeTrigger, setActiveTrigger] = useState<UpgradeTrigger | null>(null);
+
+  useEffect(() => {
+    if (tier === 'PRO' && activeTrigger) {
+      setActiveTrigger(null);
+    }
+  }, [activeTrigger, tier]);
 
   const value = useMemo(
     () => ({

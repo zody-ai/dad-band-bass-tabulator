@@ -18,11 +18,12 @@ import { isValidEmail } from '../features/auth/utils/email';
 import { useSubscription } from '../features/subscription';
 
 interface AppSectionNavProps {
-  current: 'Home' | 'Library' | 'Setlist' | 'Import' | 'GoPro';
+  current: 'Home' | 'Library' | 'Setlist' | 'Import' | 'AICreate' | 'GoPro';
   onHome: () => void;
   onLibrary: () => void;
   onSetlist: () => void;
   onImport: () => void;
+  onAICreate: () => void;
   onGoPro: () => void;
 }
 
@@ -32,6 +33,7 @@ export function AppSectionNav({
   onLibrary,
   onSetlist,
   onImport,
+  onAICreate,
   onGoPro,
 }: AppSectionNavProps) {
   const { authState, logout, loadingAction, updateLocalProfile } = useAuth();
@@ -113,6 +115,12 @@ export function AppSectionNav({
             label="Community"
             onPress={onImport}
             variant={current === 'Import' ? 'secondary' : 'ghost'}
+            size="compact"
+          />
+          <PrimaryButton
+            label="AI Create"
+            onPress={onAICreate}
+            variant={current === 'AICreate' ? 'secondary' : 'ghost'}
             size="compact"
           />
           <PrimaryButton

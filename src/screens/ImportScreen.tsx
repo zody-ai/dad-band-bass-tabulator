@@ -113,7 +113,6 @@ function toCommunitySongListItem(song: CommunitySongCardDto): CommunitySongListI
     artist: song.artist,
     key: song.key ?? 'E',
     tuning: song.tuning ?? 'EADG',
-    feelNote: song.feelNote ?? 'Community chart',
     author: song.author
       ? {
         userId: song.author.userId,
@@ -608,6 +607,7 @@ export function ImportScreen({ navigation }: Props) {
           onLibrary={() => navigation.navigate('Library')}
           onSetlist={() => navigation.navigate('Setlist')}
           onImport={() => navigation.navigate('Import')}
+          onAICreate={() => navigation.navigate('AICreate')}
           onGoPro={() => navigation.navigate('Upgrade')}
         />
       </View>

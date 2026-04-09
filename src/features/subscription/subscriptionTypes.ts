@@ -47,7 +47,8 @@ export type UpgradeTrigger =
   | 'SVG_MODE'
   | 'COMMUNITY_SAVE'
   | 'PDF_EXPORT'
-  | 'STRING_LIMIT';
+  | 'STRING_LIMIT'
+  | 'AI_GENERATE';
 
 export interface SubscriptionCapabilityDefaults {
   free: SubscriptionCapabilities;

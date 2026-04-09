@@ -3,6 +3,7 @@ import {
   CommunitySongDetailDto,
   CommunitySavedSongDto,
   CommunitySongVotesDto,
+  AiGenerateSongRequestDto,
   CreateSongRequestDto,
   MockUpgradeRequestDto,
   parsePlaylistDto,
@@ -43,6 +44,7 @@ export interface BassTabApi {
   listCommunitySongs(): Promise<CommunitySongCardDto[]>;
   getCommunitySong(publishedSongId: string): Promise<CommunitySongDetailDto>;
   createSong(payload: CreateSongRequestDto): Promise<SongDto>;
+  aiGenerateSong(payload: AiGenerateSongRequestDto): Promise<SongDto>;
   updateSongMetadata(songId: string, payload: UpdateSongMetadataRequestDto): Promise<SongMetadataDto>;
   publishSong(songId: string): Promise<void>;
   unlistPublishedSong(publishedSongId: string): Promise<void>;
@@ -152,6 +154,18 @@ export class HttpBassTabApi implements BassTabApi {
   async createSong(payload: CreateSongRequestDto): Promise<SongDto> {
     return this.request(
       '/v1/songs',
+      {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+      },
+      parseSongDto,
+    );
+  }
+
+  async aiGenerateSong(payload: AiGenerateSongRequestDto): Promise<SongDto> {
+    return this.request(
+      '/v1/songs/ai-generate',
       {
         method: 'POST',
         headers: jsonHeaders,

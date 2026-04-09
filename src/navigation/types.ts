@@ -4,6 +4,7 @@ export type TabParamList = {
   Library: undefined;
   Setlist: undefined;
   Import: undefined;
+  AICreate: undefined;
 };
 
 export type RootStackParamList = {

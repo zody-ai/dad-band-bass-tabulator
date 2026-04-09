@@ -20,9 +20,11 @@ import {
   DEFAULT_BEAT_COUNT,
   MAX_BEAT_COUNT,
   MIN_BEAT_COUNT,
+  getSlotsPerBar,
   normalizeBeatCount,
   parseTab,
 } from '../utils/tabLayout';
+import { createId } from '../utils/ids';
 import { createBassTabApiFromEnv } from '../api';
 import { usePublishedSongLookup } from '../hooks/usePublishedSongLookup';
 
@@ -52,7 +54,6 @@ const serializeSongDraft = (song: Song): string =>
     artist: song.artist,
     key: song.key,
     tuning: song.tuning,
-    feelNote: song.feelNote,
     stringNames: song.stringNames,
     rows: song.rows,
   });
@@ -73,6 +74,7 @@ export function SongEditorScreen({ navigation, route }: Props) {
   const [hasSavedOnce, setHasSavedOnce] = useState(!isNew);
   const [draftSong, setDraftSong] = useState<Song | null>(null);
   const [saveSignal, setSaveSignal] = useState(0);
+  const [configBeatCount, setConfigBeatCount] = useState(DEFAULT_BEAT_COUNT);
   const baselineRef = useRef<string>('');
   const saveResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -180,7 +182,10 @@ export function SongEditorScreen({ navigation, route }: Props) {
     return Array.from(new Set(options)).sort((a, b) => a - b);
   }, [editorSong?.stringCount]);
 
-  const effectiveDefaultBeatCount = normalizeBeatCount(chart?.defaultBeatCount ?? DEFAULT_BEAT_COUNT);
+  const isNewEmpty = isNew && (editorSong?.rows.length ?? 0) === 0;
+  const effectiveDefaultBeatCount = isNewEmpty
+    ? configBeatCount
+    : normalizeBeatCount(chart?.defaultBeatCount ?? DEFAULT_BEAT_COUNT);
   const beatCountOptions = useMemo(
     () => Array.from({ length: MAX_BEAT_COUNT - MIN_BEAT_COUNT + 1 }, (_, index) => MIN_BEAT_COUNT + index),
     [],
@@ -284,7 +289,37 @@ export function SongEditorScreen({ navigation, route }: Props) {
       return;
     }
 
+    if (isNewEmpty) {
+      setConfigBeatCount(nextBeatCount);
+      return;
+    }
+
     handleChartChange({ defaultBeatCount: nextBeatCount });
+  };
+
+  const handleStartEditing = () => {
+    setDraftSong((current) => {
+      if (!current || current.rows.length > 0) return current;
+      const slotsPerBar = getSlotsPerBar(configBeatCount);
+      return {
+        ...current,
+        rows: [{
+          id: createId('row'),
+          label: 'Intro',
+          beforeText: '',
+          afterText: '',
+          defaultBeatCount: configBeatCount,
+          bars: Array.from({ length: 4 }, () => ({
+            beatCount: configBeatCount,
+            cells: Object.fromEntries(
+              current.stringNames.map((name) => [name, Array.from({ length: slotsPerBar }, () => '-')]),
+            ),
+            note: '',
+          })),
+        }],
+      };
+    });
+    setSaveState('idle');
   };
 
   const handleSave = () => {
@@ -310,7 +345,6 @@ export function SongEditorScreen({ navigation, route }: Props) {
       artist: editorSong.artist,
       key: editorSong.key,
       tuning: editorSong.tuning,
-      feelNote: editorSong.feelNote,
       stringNames: editorSong.stringNames,
       rows: editorSong.rows,
     });
@@ -510,33 +544,46 @@ export function SongEditorScreen({ navigation, route }: Props) {
       >
         {mode === 'edit' ? (
           <>
-            {lockMetadata ? (
-              <Text style={styles.lockedMetaText}>
-                Title, artist, key, and tuning are locked while you own this song in the community. Republish after editing to push changes, or release it to edit freely.
-              </Text>
-            ) : null}
+            {isNewEmpty ? (
+              <View style={styles.newSongStart}>
+                <Text style={styles.newSongStartText}>
+                  Configure your strings, tuning, and beats per bar above, then start writing.
+                </Text>
+                <PrimaryButton
+                  label="Start Writing"
+                  onPress={handleStartEditing}
+                />
+              </View>
+            ) : (
+              <>
+                {lockMetadata ? (
+                  <Text style={styles.lockedMetaText}>
+                    Title, artist, key, and tuning are locked while you own this song in the community. Republish after editing to push changes, or release it to edit freely.
+                  </Text>
+                ) : null}
 
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Tab Editor</Text>
-              <Text style={styles.sectionMeta}>
-                Last updated {formatUpdatedAt(song.updatedAt)}
-              </Text>
-            </View>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Tab Editor</Text>
+                  <Text style={styles.sectionMeta}>
+                    Last updated {formatUpdatedAt(song.updatedAt)}
+                  </Text>
+                </View>
 
-            <SectionEditorCard
-              key={chart.id}
-              section={chart}
-              index={0}
-              isFirst
-              isLast
-              showSectionControls={false}
-              saveSignal={saveSignal}
-              onChange={handleChartChange}
-              onMoveUp={() => {}}
-              onMoveDown={() => {}}
-              onDelete={() => {}}
-            />
-
+                <SectionEditorCard
+                  key={chart.id}
+                  section={chart}
+                  index={0}
+                  isFirst
+                  isLast
+                  showSectionControls={false}
+                  saveSignal={saveSignal}
+                  onChange={handleChartChange}
+                  onMoveUp={() => {}}
+                  onMoveDown={() => {}}
+                  onDelete={() => {}}
+                />
+              </>
+            )}
           </>
         ) : (
           <>
@@ -590,7 +637,7 @@ export function SongEditorScreen({ navigation, route }: Props) {
         <PrimaryButton
           label={saveButtonLabel}
           onPress={handleSave}
-          disabled={!isDirty && hasSavedOnce}
+          disabled={isNewEmpty || (!isDirty && hasSavedOnce)}
         />
       </View>
     </ScreenContainer>
@@ -790,6 +837,19 @@ const styles = StyleSheet.create({
   sectionMeta: {
     fontSize: 13,
     color: palette.textMuted,
+  },
+  newSongStart: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    paddingVertical: 48,
+  },
+  newSongStartText: {
+    fontSize: 14,
+    color: palette.textMuted,
+    textAlign: 'center',
+    maxWidth: 320,
   },
   lockedMetaText: {
     fontSize: 12,

@@ -30,7 +30,6 @@ interface SongInput {
   title?: string;
   artist?: string;
   key?: string;
-  feelNote?: string;
   tuning?: string;
   stringCount?: number;
 }
@@ -54,7 +53,6 @@ interface LegacySong {
   title: string;
   artist: string;
   key: string;
-  feelNote: string;
   tuning: string;
   updatedAt: string;
   sections?: LegacySection[];
@@ -216,7 +214,6 @@ const migrateLegacySong = (legacySong: Song | LegacySong): Song => {
       title: legacySong.title,
       artist: legacySong.artist,
       key: legacySong.key,
-      feelNote: legacySong.feelNote,
       tuning: legacySong.tuning,
       updatedAt: legacySong.updatedAt,
       stringCount: defaultStringNames.length,
@@ -254,7 +251,6 @@ const migrateLegacySong = (legacySong: Song | LegacySong): Song => {
     title: legacySong.title,
     artist: legacySong.artist,
     key: legacySong.key,
-    feelNote: legacySong.feelNote,
     tuning: legacySong.tuning,
     updatedAt: legacySong.updatedAt,
     stringCount: stringNames.length,
@@ -497,12 +493,11 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       title: input?.title ?? 'Untitled Song',
       artist: input?.artist ?? 'Unknown Artist',
       key: input?.key ?? 'E',
-      feelNote: input?.feelNote ?? 'Mid-tempo pocket',
       tuning: input?.tuning ?? tuningOptions[0],
       updatedAt: new Date().toISOString(),
       stringCount,
       stringNames,
-      rows: [createEmptyRow('Intro', stringNames)],
+      rows: [],
     };
 
     if (!backendApi) {
@@ -515,7 +510,6 @@ export function BassTabProvider({ children }: PropsWithChildren) {
         title: draftSong.title,
         artist: draftSong.artist,
         key: draftSong.key,
-        feelNote: draftSong.feelNote,
         tuning: draftSong.tuning,
         stringCount: draftSong.stringCount,
         chart: {
@@ -684,7 +678,6 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       ...(updates.title !== undefined ? { title: updates.title } : {}),
       ...(updates.artist !== undefined ? { artist: updates.artist } : {}),
       ...(updates.key !== undefined ? { key: updates.key } : {}),
-      ...(updates.feelNote !== undefined ? { feelNote: updates.feelNote } : {}),
       ...(updates.tuning !== undefined ? { tuning: updates.tuning } : {}),
       ...(normalizedUpdates.stringCount !== undefined ? { stringCount: normalizedUpdates.stringCount } : {}),
     };
@@ -853,7 +846,6 @@ export function BassTabProvider({ children }: PropsWithChildren) {
             title: song.title,
             artist: song.artist,
             key: song.key,
-            feelNote: song.feelNote,
             tuning: song.tuning,
           });
           await backendApi.replaceSongChart(song.id, {
@@ -870,7 +862,6 @@ export function BassTabProvider({ children }: PropsWithChildren) {
             title: song.title,
             artist: song.artist,
             key: song.key,
-            feelNote: song.feelNote,
             tuning: song.tuning,
             stringCount: song.stringCount,
             chart: {

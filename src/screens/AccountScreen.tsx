@@ -25,6 +25,7 @@ export function AccountScreen({ navigation }: Props) {
           onLibrary={() => navigation.navigate('MainTabs', { screen: 'Library' })}
           onSetlist={() => navigation.navigate('MainTabs', { screen: 'Setlist' })}
           onImport={() => navigation.navigate('MainTabs', { screen: 'Import' })}
+          onAICreate={() => navigation.navigate('MainTabs', { screen: 'AICreate' })}
           onGoPro={() => navigation.navigate('Upgrade')}
         />
       </View>

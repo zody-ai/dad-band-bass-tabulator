@@ -54,6 +54,12 @@ export const upgradePromptContent: Record<UpgradeTrigger, UpgradePromptContent> 
     triggerMessage: 'Stage-ready strings beyond four require BassTab Pro.',
     features: proBenefits,
   },
+  AI_GENERATE: {
+    title: 'Unlock Unlimited AI Generation',
+    valueStatement: 'Let AI draft a bass tab so you can focus on playing.',
+    triggerMessage: "You've used your free AI generations. Upgrade for unlimited access.",
+    features: proBenefits,
+  },
 };
 
 export class UpgradeGateError extends Error {
@@ -76,6 +82,7 @@ const backendCodeToTrigger: Record<string, UpgradeTrigger> = {
   PDF_LOCKED: 'PDF_EXPORT',
   COMMUNITY_LIMIT: 'COMMUNITY_SAVE',
   STRING_LIMIT: 'STRING_LIMIT',
+  AI_GENERATE_LOCKED: 'AI_GENERATE',
 };
 
 export const resolveUpgradeTrigger = (error: unknown): UpgradeTrigger | null => {

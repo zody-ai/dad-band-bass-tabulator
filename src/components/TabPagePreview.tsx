@@ -92,7 +92,7 @@ const buildAsciiBeatGuideSegment = (bar: ParsedBar): string => {
     body += `${beat} & `;
   }
 
-  return body;
+  return body + '|';
 };
 
 const parseAnnotationLayout = (value: string): AnnotationFormat => {

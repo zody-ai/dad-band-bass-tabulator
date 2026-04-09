@@ -140,6 +140,7 @@ export function SetlistScreen({ navigation }: Props) {
           onLibrary={() => navigation.navigate('Library')}
           onSetlist={() => navigation.navigate('Setlist')}
           onImport={() => navigation.navigate('Import')}
+          onAICreate={() => navigation.navigate('AICreate')}
           onGoPro={() => navigation.navigate('Upgrade')}
         />
         <View style={styles.headerActions}>
