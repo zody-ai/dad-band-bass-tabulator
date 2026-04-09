@@ -245,6 +245,13 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   }, [cancelFinalizingPoll, refresh]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      cancelFinalizingPoll();
+      setFinalizingUpgrade(false);
+      setFinalizingError(null);
+      return;
+    }
+
     const handleUrl = ({ url }: { url: string }) => {
       const parsed = ExpoLinking.parse(url);
 
@@ -269,7 +276,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       subscription.remove();
       cancelFinalizingPoll();
     };
-  }, [cancelFinalizingPoll, startFinalizingPoll]);
+  }, [cancelFinalizingPoll, isAuthenticated, startFinalizingPoll]);
 
   const upgrade = useCallback(async () => {
     const displayedPrice = pickDisplayedPrice(snapshot, pricing);
