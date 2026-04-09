@@ -3,10 +3,11 @@ import {
   NavigationContainer,
   DefaultTheme,
   LinkingOptions,
+  useNavigation,
   getStateFromPath as getNativeStateFromPath,
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { palette } from '../constants/colors';
@@ -15,7 +16,6 @@ import { AuthEntryScreen } from '../features/auth/components/AuthEntryScreen';
 import { AuthRestoringScreen } from '../features/auth/components/AuthRestoringScreen';
 import { ResetPasswordScreen } from '../features/auth/components/ResetPasswordScreen';
 import { VerifyEmailScreen } from '../features/auth/components/VerifyEmailScreen';
-import { getAuthRouteMode } from '../features/auth/state/authReducer';
 import { useAuth } from '../features/auth/state/useAuth';
 import { AccountScreen } from '../screens/AccountScreen';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -39,6 +39,19 @@ import { SongEditorErrorBoundary } from '../components/SongEditorErrorBoundary';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
+
+function ProtectedRedirectScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  useEffect(() => {
+    navigation.replace('AuthEntry', {
+      view: 'LOGIN',
+      source: 'protected-route',
+    });
+  }, [navigation]);
+
+  return <AuthRestoringScreen />;
+}
 
 function MainTabs() {
   return (
@@ -121,6 +134,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [webOrigin, 'basstab://'].filter(Boolean),
   config: {
     screens: {
+      Landing: '',
       AuthEntry: 'auth',
       VerifyEmail: 'auth/verify-email',
       ResetPassword: 'auth/reset-password',
@@ -146,7 +160,13 @@ export const linking: LinkingOptions<RootStackParamList> = {
 export function AppNavigator() {
   const { authState } = useAuth();
   const { loadStateFromFile } = useBassTab();
-  const routeMode = getAuthRouteMode(authState);
+  const isRestoring = authState.type === 'RESTORING_SESSION';
+  const isAuthenticated = authState.type === 'AUTHENTICATED';
+  const initialRouteName: keyof RootStackParamList = isRestoring
+    ? 'AuthRestoring'
+    : isAuthenticated
+      ? 'MainTabs'
+      : 'Landing';
   const hydratedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -168,6 +188,8 @@ export function AppNavigator() {
   return (
     <NavigationContainer theme={defaultTheme} linking={linking}>
       <Stack.Navigator
+        key={isAuthenticated ? 'app' : 'public'}
+        initialRouteName={initialRouteName}
         screenOptions={{
           contentStyle: { backgroundColor: palette.background },
           headerShadowVisible: false,
@@ -179,7 +201,7 @@ export function AppNavigator() {
           },
         }}
       >
-        {routeMode === 'restoring' ? (
+        {isRestoring ? (
           <Stack.Screen
             name="AuthRestoring"
             component={AuthRestoringScreen}
@@ -187,115 +209,131 @@ export function AppNavigator() {
           />
         ) : null}
 
-        {routeMode === 'auth' ? (
-          <Stack.Screen
-            name="AuthEntry"
-            component={AuthEntryScreen}
-            options={{ headerShown: false }}
-          />
-        ) : null}
-
-        {routeMode === 'app' ? (
+        {!isRestoring ? (
           <>
-            <Stack.Screen
-              name="MainTabs"
-              component={MainTabs}
-              options={{ headerShown: false }}
-            />
             <Stack.Screen
               name="Landing"
               component={LandingScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="Welcome"
-              component={WelcomeScreen}
-              options={{
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="Home"
-              component={HomeScreen}
+              name="AuthEntry"
+              component={AuthEntryScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen
-              name="Account"
-              component={AccountScreen}
-              options={{ title: 'BassTab Account' }}
-            />
-            <Stack.Screen
-              name="Upgrade"
-              component={UpgradeScreen}
-              options={{
-                title: 'Go Pro',
-                headerStyle: { backgroundColor: '#0b0b0f' },
-                headerTintColor: '#f8fafc',
-                headerTitleStyle: {
-                  color: '#f8fafc',
-                  fontWeight: '700',
-                  fontFamily: brandDisplayFontFamily,
-                },
-                contentStyle: { backgroundColor: '#0b0b0f' },
-              }}
-            />
-            <Stack.Screen name="SongEditor" options={{ headerShown: false }}>
-              {(props) => (
-                <SongEditorErrorBoundary>
-                  <SongEditorScreen {...props} />
-                </SongEditorErrorBoundary>
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="PerformanceView"
-              component={LiveViewScreen}
-              options={{
-                title: 'Dad Band Bass Live View',
-                headerStyle: { backgroundColor: palette.liveBackground },
-                headerTintColor: palette.liveText,
-                headerTitleStyle: {
-                  color: palette.liveText,
-                  fontWeight: '700',
-                  fontFamily: brandDisplayFontFamily,
-                },
-                contentStyle: { backgroundColor: palette.liveBackground },
-              }}
-            />
-            <Stack.Screen
-              name="SetlistPerformance"
-              component={SetlistPerformanceScreen}
-              options={{
-                title: 'Setlist Performance',
-                headerStyle: { backgroundColor: palette.liveBackground },
-                headerTintColor: palette.liveText,
-                headerTitleStyle: {
-                  color: palette.liveText,
-                  fontWeight: '700',
-                  fontFamily: brandDisplayFontFamily,
-                },
-                contentStyle: { backgroundColor: palette.liveBackground },
-              }}
-            />
-            <Stack.Screen
-              name="ExportSong"
-              component={SongExportScreen}
-              options={{ title: 'Dad Band Bass Export Song' }}
-            />
-            <Stack.Screen
-              name="ExportSetlist"
-              component={SetlistExportScreen}
-              options={{ title: 'Dad Band Bass Export Setlist' }}
-            />
-            <Stack.Screen
-              name="ImportDetail"
-              component={ImportDetailScreen}
-              options={{ title: 'Dad Band Bass Import Flow' }}
-            />
-            <Stack.Screen
-              name="ImportPaste"
-              component={ImportPasteScreen}
-              options={{ title: 'Dad Band Bass Paste Tab' }}
-            />
+            {isAuthenticated ? (
+              <>
+                <Stack.Screen
+                  name="MainTabs"
+                  component={MainTabs}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="Welcome"
+                  component={WelcomeScreen}
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="Home"
+                  component={HomeScreen}
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="Account"
+                  component={AccountScreen}
+                  options={{ title: 'BassTab Account' }}
+                />
+                <Stack.Screen
+                  name="Upgrade"
+                  component={UpgradeScreen}
+                  options={{
+                    title: 'Go Pro',
+                    headerStyle: { backgroundColor: '#0b0b0f' },
+                    headerTintColor: '#f8fafc',
+                    headerTitleStyle: {
+                      color: '#f8fafc',
+                      fontWeight: '700',
+                      fontFamily: brandDisplayFontFamily,
+                    },
+                    contentStyle: { backgroundColor: '#0b0b0f' },
+                  }}
+                />
+                <Stack.Screen name="SongEditor" options={{ headerShown: false }}>
+                  {(props) => (
+                    <SongEditorErrorBoundary>
+                      <SongEditorScreen {...props} />
+                    </SongEditorErrorBoundary>
+                  )}
+                </Stack.Screen>
+                <Stack.Screen
+                  name="PerformanceView"
+                  component={LiveViewScreen}
+                  options={{
+                    title: 'Dad Band Bass Live View',
+                    headerStyle: { backgroundColor: palette.liveBackground },
+                    headerTintColor: palette.liveText,
+                    headerTitleStyle: {
+                      color: palette.liveText,
+                      fontWeight: '700',
+                      fontFamily: brandDisplayFontFamily,
+                    },
+                    contentStyle: { backgroundColor: palette.liveBackground },
+                  }}
+                />
+                <Stack.Screen
+                  name="SetlistPerformance"
+                  component={SetlistPerformanceScreen}
+                  options={{
+                    title: 'Setlist Performance',
+                    headerStyle: { backgroundColor: palette.liveBackground },
+                    headerTintColor: palette.liveText,
+                    headerTitleStyle: {
+                      color: palette.liveText,
+                      fontWeight: '700',
+                      fontFamily: brandDisplayFontFamily,
+                    },
+                    contentStyle: { backgroundColor: palette.liveBackground },
+                  }}
+                />
+                <Stack.Screen
+                  name="ExportSong"
+                  component={SongExportScreen}
+                  options={{ title: 'Dad Band Bass Export Song' }}
+                />
+                <Stack.Screen
+                  name="ExportSetlist"
+                  component={SetlistExportScreen}
+                  options={{ title: 'Dad Band Bass Export Setlist' }}
+                />
+                <Stack.Screen
+                  name="ImportDetail"
+                  component={ImportDetailScreen}
+                  options={{ title: 'Dad Band Bass Import Flow' }}
+                />
+                <Stack.Screen
+                  name="ImportPaste"
+                  component={ImportPasteScreen}
+                  options={{ title: 'Dad Band Bass Paste Tab' }}
+                />
+              </>
+            ) : (
+              <>
+                <Stack.Screen name="MainTabs" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="Welcome" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="Home" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="Account" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="Upgrade" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="SongEditor" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="PerformanceView" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="SetlistPerformance" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="ExportSong" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="ExportSetlist" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="ImportDetail" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="ImportPaste" component={ProtectedRedirectScreen} options={{ headerShown: false }} />
+              </>
+            )}
           </>
         ) : null}
 

@@ -45,9 +45,9 @@ export function LoginScreen() {
   return (
     <ScreenContainer contentStyle={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Sign in to BassTab</Text>
+        <Text style={styles.title}>Welcome back to BassTab</Text>
         <Text style={styles.body}>
-          Sign in with your email address and password.
+          Pick up where you left off.
         </Text>
 
         {infoMessage ? <Text style={styles.successText}>{infoMessage}</Text> : null}
@@ -153,9 +153,9 @@ export function LoginScreen() {
         </View>
 
         <View style={styles.linkRow}>
-          <Text style={styles.linkText}>Need an account?</Text>
+          <Text style={styles.linkText}>New here? Start free.</Text>
           <PrimaryButton
-            label="Create Account"
+            label="Start Free"
             variant="ghost"
             size="compact"
             onPress={() => {

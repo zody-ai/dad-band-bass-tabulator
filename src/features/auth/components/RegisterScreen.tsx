@@ -76,9 +76,9 @@ export function RegisterScreen() {
   return (
     <ScreenContainer contentStyle={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Create your account</Text>
+        <Text style={styles.title}>Start free with BassTab</Text>
         <Text style={styles.body}>
-          Register with your email, choose a password, and reserve your public handle.
+          Make your account and start building your library in minutes.
         </Text>
 
         {infoMessage ? <Text style={styles.successText}>{infoMessage}</Text> : null}

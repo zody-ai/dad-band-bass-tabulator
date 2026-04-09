@@ -9,7 +9,12 @@ export type TabParamList = {
 
 export type RootStackParamList = {
   AuthRestoring: undefined;
-  AuthEntry: undefined;
+  AuthEntry:
+    | {
+      view?: 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
+      source?: string;
+    }
+    | undefined;
   VerifyEmail: { token?: string } | undefined;
   ResetPassword: { token?: string } | undefined;
   Home: undefined;
