@@ -199,34 +199,38 @@ export function AppSectionNav({
         )}
         {signedInUser ? (
           <View style={[styles.accountCluster, isCompactLayout && styles.accountClusterCompact]}>
-            <Text style={styles.accountLabel}>Signed in</Text>
-            <Text style={styles.accountUserId} numberOfLines={1} ellipsizeMode="tail">
-              @{signedInUserId ?? 'unknown'}
-            </Text>
-            <View style={[styles.tierPill, tier === 'PRO' ? styles.tierPillPro : styles.tierPillFree]}>
-              <Text style={[styles.tierPillText, tier === 'PRO' ? styles.tierPillTextPro : styles.tierPillTextFree]}>
-                {tier}
+            <View style={[styles.accountIdentityRow, isCompactLayout && styles.accountIdentityRowCompact]}>
+              <Text style={styles.accountLabel}>Signed in</Text>
+              <Text style={styles.accountUserId} numberOfLines={1} ellipsizeMode="tail">
+                @{signedInUserId ?? 'unknown'}
               </Text>
+              <View style={[styles.tierPill, tier === 'PRO' ? styles.tierPillPro : styles.tierPillFree]}>
+                <Text style={[styles.tierPillText, tier === 'PRO' ? styles.tierPillTextPro : styles.tierPillTextFree]}>
+                  {tier}
+                </Text>
+              </View>
             </View>
-            <PrimaryButton
-              label="Settings"
-              onPress={() => setSettingsVisible(true)}
-              variant="ghost"
-              size="compact"
-              style={styles.clusterButton}
-            />
-            <PrimaryButton
-              label={isLoggingOut ? 'Signing out...' : 'Sign out'}
-              onPress={() => {
-                if (!isLoggingOut) {
-                  void logout();
-                }
-              }}
-              variant="ghost"
-              size="compact"
-              disabled={isLoggingOut}
-              style={styles.clusterButton}
-            />
+            <View style={[styles.accountActionsRow, isCompactLayout && styles.accountActionsRowCompact]}>
+              <PrimaryButton
+                label="Settings"
+                onPress={() => setSettingsVisible(true)}
+                variant="ghost"
+                size="compact"
+                style={[styles.clusterButton, isCompactLayout && styles.clusterButtonCompact]}
+              />
+              <PrimaryButton
+                label={isLoggingOut ? 'Signing out...' : 'Sign out'}
+                onPress={() => {
+                  if (!isLoggingOut) {
+                    void logout();
+                  }
+                }}
+                variant="ghost"
+                size="compact"
+                disabled={isLoggingOut}
+                style={[styles.clusterButton, isCompactLayout && styles.clusterButtonCompact]}
+              />
+            </View>
           </View>
         ) : null}
       </View>
@@ -491,11 +495,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   accountClusterCompact: {
-    flex: 0,
     width: '100%',
     minWidth: 0,
     maxWidth: '100%',
-    alignSelf: 'stretch',
+    alignItems: 'stretch',
+    flexDirection: 'column',
+    gap: 8,
   },
   accountCluster: {
     minWidth: 280,
@@ -510,6 +515,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
+  },
+  accountIdentityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  accountIdentityRowCompact: {
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
+  },
+  accountActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  accountActionsRowCompact: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#dbe2f1',
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
   accountLabel: {
     fontSize: 10,
@@ -529,7 +559,11 @@ const styles = StyleSheet.create({
   clusterButton: {
     minHeight: 32,
     paddingHorizontal: 9,
-    marginLeft: 2,
+  },
+  clusterButtonCompact: {
+    borderRadius: 10,
+    minHeight: 30,
+    paddingHorizontal: 10,
   },
   tierPill: {
     borderRadius: 999,
