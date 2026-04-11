@@ -1250,8 +1250,8 @@ function RowEditor({
   };
 
   const renderSelectedBarToolbar = () => (
-    <View style={styles.barToolbarRow}>
-      <View style={styles.barToolbarCountField}>
+    <View style={[styles.barToolbarRow, useMobileCellEditor && styles.barToolbarRowMobile]}>
+      <View style={[styles.barToolbarCountField, useMobileCellEditor && styles.barToolbarCountFieldMobile]}>
         <RowBarCountField
           label="Bars"
           value={row.barCount}
@@ -1259,44 +1259,59 @@ function RowEditor({
           inline
         />
       </View>
-      <View style={styles.barFooter}>
+      <View style={[styles.barFooter, useMobileCellEditor && styles.barFooterMobile]}>
         <PrimaryButton
-          label="＋ Insert"
+          label={useMobileCellEditor ? 'Insert' : '＋ Insert'}
           onPress={insertAfterSelectedBar}
           variant="ghost"
           size="compact"
-          style={[styles.barFooterButton, { width: actionButtonWidth }]}
+          style={[
+            styles.barFooterButton,
+            useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
+          ]}
         />
         <PrimaryButton
-          label="⧉ Duplicate"
+          label={useMobileCellEditor ? 'Duplicate' : '⧉ Duplicate'}
           onPress={duplicateSelectedBar}
           variant="ghost"
           size="compact"
-          style={[styles.barFooterButton, { width: actionButtonWidth }]}
+          style={[
+            styles.barFooterButton,
+            useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
+          ]}
         />
         <PrimaryButton
           label="← Move"
           onPress={() => moveSelectedBar(-1)}
           variant="ghost"
           size="compact"
-          style={[styles.barFooterButton, { width: actionButtonWidth }]}
+          style={[
+            styles.barFooterButton,
+            useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
+          ]}
         />
         <PrimaryButton
           label="Move →"
           onPress={() => moveSelectedBar(1)}
           variant="ghost"
           size="compact"
-          style={[styles.barFooterButton, { width: actionButtonWidth }]}
+          style={[
+            styles.barFooterButton,
+            useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
+          ]}
         />
         <PrimaryButton
-          label="⎘ Copy"
+          label={useMobileCellEditor ? 'Copy' : '⎘ Copy'}
           onPress={() => setCopiedBar(cloneBar(selectedBar))}
           variant="ghost"
           size="compact"
-          style={[styles.barFooterButton, { width: actionButtonWidth }]}
+          style={[
+            styles.barFooterButton,
+            useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
+          ]}
         />
         <PrimaryButton
-          label="⎘ Paste"
+          label={useMobileCellEditor ? 'Paste' : '⎘ Paste'}
           onPress={() =>
             copiedBar
               ? replaceBar(selectedGlobalBarIndex, copiedBar)
@@ -1305,24 +1320,30 @@ function RowEditor({
           variant="ghost"
           style={[
             styles.barFooterButton,
-            { width: actionButtonWidth },
+            useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
             !copiedBar ? styles.disabled : undefined,
           ]}
           size="compact"
         />
         <PrimaryButton
-          label="✕ Clear"
+          label={useMobileCellEditor ? 'Clear' : '✕ Clear'}
           onPress={() => clearBar(selectedGlobalBarIndex)}
           variant="ghost"
           size="compact"
-          style={[styles.barFooterButton, { width: actionButtonWidth }]}
+          style={[
+            styles.barFooterButton,
+            useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
+          ]}
         />
         <PrimaryButton
-          label="🗑 Delete"
+          label={useMobileCellEditor ? 'Delete' : '🗑 Delete'}
           onPress={deleteSelectedBar}
           variant="danger"
           size="compact"
-          style={[styles.barFooterButton, { width: actionButtonWidth }]}
+          style={[
+            styles.barFooterButton,
+            useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
+          ]}
         />
       </View>
     </View>
@@ -1334,7 +1355,7 @@ function RowEditor({
       <Text style={styles.barSelectorHint}>
         Bar actions apply to the selected bar.
       </Text>
-      <View style={styles.barSelectorControls}>
+      <View style={[styles.barSelectorControls, useMobileCellEditor && styles.barSelectorControlsMobile]}>
         <PrimaryButton
           label="←"
           onPress={() => {
@@ -1344,21 +1365,27 @@ function RowEditor({
           }}
           variant="ghost"
           size="compact"
-          style={[styles.barStepButton, activeBarIndex === 0 ? styles.disabled : undefined]}
+          style={[
+            styles.barStepButton,
+            useMobileCellEditor && styles.barStepButtonMobile,
+            activeBarIndex === 0 ? styles.disabled : undefined,
+          ]}
         />
-        <View style={styles.barSelectorPills}>
+        <View style={[styles.barSelectorPills, useMobileCellEditor && styles.barSelectorPillsMobile]}>
           {row.bars.map((_bar, rowBarIndex) => (
             <Pressable
               key={`${sectionId}-selector-bar-${rowBarIndex}`}
               onPress={() => selectBar(rowBarIndex)}
               style={[
                 styles.barSelectorPill,
+                useMobileCellEditor && styles.barSelectorPillMobile,
                 rowBarIndex === activeBarIndex && styles.barSelectorPillActive,
               ]}
             >
               <Text
                 style={[
                   styles.barSelectorPillLabel,
+                  useMobileCellEditor && styles.barSelectorPillLabelMobile,
                   rowBarIndex === activeBarIndex && styles.barSelectorPillLabelActive,
                 ]}
               >
@@ -1378,6 +1405,7 @@ function RowEditor({
           size="compact"
           style={[
             styles.barStepButton,
+            useMobileCellEditor && styles.barStepButtonMobile,
             activeBarIndex === row.bars.length - 1 ? styles.disabled : undefined,
           ]}
         />
@@ -2449,16 +2477,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  barSelectorControlsMobile: {
+    alignItems: 'flex-start',
+    gap: 6,
+  },
   barStepButton: {
     minHeight: 36,
     minWidth: 40,
     paddingHorizontal: 10,
+  },
+  barStepButtonMobile: {
+    minWidth: 34,
+    minHeight: 34,
+    paddingHorizontal: 8,
   },
   barSelectorPills: {
     flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  barSelectorPillsMobile: {
+    gap: 6,
   },
   barSelectorPill: {
     minWidth: 40,
@@ -2471,6 +2511,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  barSelectorPillMobile: {
+    minWidth: 34,
+    minHeight: 34,
+    paddingHorizontal: 10,
+  },
   barSelectorPillActive: {
     borderColor: palette.primary,
     backgroundColor: '#e0f3ef',
@@ -2479,6 +2524,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: palette.text,
+  },
+  barSelectorPillLabelMobile: {
+    fontSize: 13,
   },
   barSelectorPillLabelActive: {
     color: palette.primary,
@@ -2783,6 +2831,15 @@ const styles = StyleSheet.create({
   barToolbarCountField: {
     width: 104,
   },
+  barToolbarRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+  },
+  barToolbarCountFieldMobile: {
+    width: '100%',
+    maxWidth: 150,
+  },
   barFooter: {
     flex: 1,
     flexDirection: 'row',
@@ -2792,8 +2849,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     gap: 6,
   },
+  barFooterMobile: {
+    width: '100%',
+    flex: 0,
+    justifyContent: 'space-between',
+    gap: 6,
+  },
   barFooterButton: {
     minHeight: 34,
+  },
+  barFooterButtonMobile: {
+    flexBasis: '31%',
+    flexGrow: 1,
+    minWidth: 76,
+    minHeight: 32,
+    paddingHorizontal: 6,
   },
   rowBarInlineField: {
     flexDirection: 'row',
