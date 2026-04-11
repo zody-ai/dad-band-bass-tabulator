@@ -332,10 +332,14 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       backendApi.listSongs(),
       backendApi.getPlaylist(),
     ]);
-    const songDtos = await Promise.all(
+    const songResults = await Promise.allSettled(
       songsMetadata.map((songMetadata) => backendApi.getSong(songMetadata.id)),
     );
-    const nextSongs = songDtos.map(fromSongDto);
+    const failedCount = songResults.filter((r) => r.status === 'rejected').length;
+    if (failedCount > 0) {
+      console.warn(`[BassTab] hydrateFromBackend: ${failedCount} of ${songResults.length} songs failed to load`);
+    }
+    const nextSongs = songResults.flatMap((r) => (r.status === 'fulfilled' ? [fromSongDto(r.value)] : []));
     const knownSongIds = new Set(nextSongs.map((song) => song.id));
     const playlist = fromPlaylistDto(playlistDto);
     const normalizedPlaylist = normalizeSetlist(sanitizeSetlistSongIds(playlist, knownSongIds));
@@ -420,13 +424,6 @@ export function BassTabProvider({ children }: PropsWithChildren) {
           await hydrateFromBackend();
         } catch (error) {
           console.warn('BassTab backend hydrate failed', error);
-
-          if (isMounted) {
-            const fallbackSetlist = createDefaultSetlist();
-            setSongs([]);
-            setSetlists([fallbackSetlist]);
-            setActiveSetlistId(fallbackSetlist.id);
-          }
         } finally {
           if (isMounted) {
             setHasHydrated(true);

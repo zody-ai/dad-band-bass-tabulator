@@ -698,12 +698,39 @@ const toCommunitySavedSongDto = (value: unknown): CommunitySavedSongDto => {
   };
 };
 
+const normalizeSongMetadataDto = (value: unknown): SongMetadataDto | null => {
+  if (!isRecord(value) || typeof value.id !== 'string') {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    title: typeof value.title === 'string' ? value.title : '',
+    artist: typeof value.artist === 'string' ? value.artist : '',
+    key: typeof value.key === 'string' ? value.key : 'E',
+    tuning: typeof value.tuning === 'string' ? value.tuning : 'EADG',
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : new Date().toISOString(),
+    stringCount: typeof value.stringCount === 'number' ? value.stringCount : 4,
+    importedPublishedSongId:
+      typeof value.importedPublishedSongId === 'string' ? value.importedPublishedSongId : null,
+  };
+};
+
 export const parseSongMetadataListDto = (value: unknown): SongMetadataDto[] => {
-  if (!Array.isArray(value) || !value.every((item) => isSongMetadataDto(item))) {
+  if (!Array.isArray(value)) {
     throw new Error('Invalid songs metadata response payload.');
   }
 
-  return value;
+  const results: SongMetadataDto[] = [];
+  for (const item of value) {
+    const normalized = normalizeSongMetadataDto(item);
+    if (normalized) {
+      results.push(normalized);
+    } else {
+      console.warn('[BassTab] parseSongMetadataListDto: skipping invalid item', item);
+    }
+  }
+  return results;
 };
 
 export const parseSongMetadataDto = (value: unknown): SongMetadataDto => {
