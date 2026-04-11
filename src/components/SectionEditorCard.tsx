@@ -4,6 +4,7 @@ import {
 } from '@expo/vector-icons';
 
 import {
+  Modal,
   NativeSyntheticEvent,
   Platform,
   Pressable,
@@ -54,7 +55,7 @@ interface SectionEditorCardProps {
 
 const barsPerRow = 4;
 const baseFretOptions = Array.from({ length: 12 }, (_value, index) => String(index + 1));
-const extendedFretOptions = ['13', '14', '15', '16', '17', '18', '19', '/', '\\'];
+const extendedFretOptions = ['13', '14', '15', '16', '17', '18', '19', '20', '21', '/', '\\', '-', '.'];
 const PREVIEW_RENDER_MODES: TabPreviewRenderMode[] = ['ascii', 'svg'];
 
 const normalizeBarNotes = (barCount: number, barNotes?: string[]): string[] =>
@@ -732,7 +733,12 @@ export function SectionEditorCard({
         </View>
       </View>
 
-      {previewVisible ? (
+      <Modal
+        animationType="fade"
+        transparent
+        visible={previewVisible}
+        onRequestClose={() => setPreviewVisible(false)}
+      >
         <View style={styles.previewOverlay}>
           <Pressable style={styles.previewBackdrop} onPress={() => setPreviewVisible(false)} />
           <View style={[styles.previewModal, isPreviewCompact && styles.previewModalCompact]}>
@@ -807,7 +813,7 @@ export function SectionEditorCard({
             ) : null}
           </View>
         </View>
-      ) : null}
+      </Modal>
     </View>
   );
 }
@@ -1594,7 +1600,7 @@ function RowEditor({
                   style={styles.mobilePadActionButton}
                 />
                 <PrimaryButton
-                  label={showExtendedFretPad ? '1-12' : '13+ / \\'}
+                  label={showExtendedFretPad ? '1-12' : '13+'}
                   onPress={() => setShowExtendedFretPad((value) => !value)}
                   variant="ghost"
                   size="compact"
@@ -2794,12 +2800,14 @@ const styles = StyleSheet.create({
   mobileFretPad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    rowGap: 8,
+    columnGap: 6,
   },
   mobileFretButton: {
-    minWidth: 46,
+    flexBasis: '18%',
+    maxWidth: '18%',
     minHeight: 42,
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: palette.border,

@@ -196,7 +196,7 @@ export function SetlistScreen({ navigation }: Props) {
           </Text>
           {tier !== 'PRO' ? (
             <Pressable onPress={() => navigation.navigate('Upgrade')}>
-              <Text style={styles.planLink}>Go Pro →</Text>
+              <Text style={styles.planLink}>Upgrade to Pro →</Text>
             </Pressable>
           ) : null}
         </View>

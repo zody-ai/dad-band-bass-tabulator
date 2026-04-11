@@ -673,7 +673,7 @@ export function ImportScreen({ navigation }: Props) {
                 : 'Unlimited saves.'}
             </Text>
             <Pressable onPress={() => navigation.navigate('Upgrade')}>
-              <Text style={styles.planLink}>Go Pro for more →</Text>
+              <Text style={styles.planLink}>Upgrade to Pro →</Text>
             </Pressable>
           </>
         ) : (

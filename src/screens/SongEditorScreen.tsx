@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Circle, Svg, Text as SvgText } from 'react-native-svg';
 
 import { EmptyState } from '../components/EmptyState';
+import { AppSectionNav } from '../components/AppSectionNav';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { SectionEditorCard } from '../components/SectionEditorCard';
 import { TabPagePreview } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
+import { brandDisplayFontFamily } from '../constants/typography';
 import { tuningOptions } from '../constants/tunings';
 import { useSubscription, useUpgradePrompt } from '../features/subscription';
 import { useAuth } from '../features/auth';
@@ -32,6 +35,23 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SongEditor'>;
 
 type EditorMode = 'edit' | 'preview';
 type SaveState = 'idle' | 'saving' | 'saved';
+
+const NAMEPLATE_BG = '#1a120a';
+const NAMEPLATE_TEXT = '#f5e6c8';
+const NAMEPLATE_MUTED = '#a8957e';
+const NAMEPLATE_GOLD = '#c8a96e';
+
+function DadBandBadge() {
+  return (
+    <Svg width={80} height={80} viewBox="0 0 120 120">
+      <Circle cx="60" cy="60" r="54" fill="none" stroke={NAMEPLATE_GOLD} strokeWidth={3} />
+      <Circle cx="60" cy="60" r="44" fill="none" stroke={NAMEPLATE_GOLD} strokeWidth={2} strokeDasharray="4 3" />
+      <SvgText x="60" y="65" textAnchor="middle" fontSize={18} fontWeight="bold" letterSpacing={2} fill={NAMEPLATE_TEXT} fontFamily="Arial">DAD BAND</SvgText>
+      <SvgText x="60" y="24" textAnchor="middle" fontSize={8} letterSpacing={1.5} fill={NAMEPLATE_GOLD} fontFamily="Arial">LIBRARY</SvgText>
+      <SvgText x="60" y="108" textAnchor="middle" fontSize={7} letterSpacing={1.2} fill={NAMEPLATE_GOLD} fontFamily="Arial">SORT OF KNOW THESE</SvgText>
+    </Svg>
+  );
+}
 
 const cloneSong = (song: Song): Song => ({
   ...song,
@@ -360,6 +380,34 @@ export function SongEditorScreen({ navigation, route }: Props) {
 
   return (
     <ScreenContainer scroll={false} contentStyle={styles.screen}>
+      <View style={styles.navRow}>
+        <AppSectionNav
+          current="Library"
+          onHome={() => navigation.navigate('Home')}
+          onLibrary={() => navigation.navigate('MainTabs', { screen: 'Library' })}
+          onSetlist={() => navigation.navigate('MainTabs', { screen: 'Setlist' })}
+          onImport={() => navigation.navigate('MainTabs', { screen: 'Import' })}
+          onAICreate={() => navigation.navigate('MainTabs', { screen: 'AICreate' })}
+          onGoPro={() => navigation.navigate('Upgrade')}
+          onAccount={() => navigation.navigate('Account')}
+        />
+      </View>
+
+      <View style={styles.nameplate}>
+        <View style={styles.nameplateInner}>
+          <View style={styles.nameplateText}>
+            <Text style={styles.nameplateTitle}>Dad Band Library 🎸</Text>
+            <Text style={styles.nameplateSubtitle}>All the songs we sort of know.</Text>
+            <View style={styles.warningPill}>
+              <Text style={styles.warningPillText}>⚠️ Accuracy varies. Confidence does not.</Text>
+            </View>
+          </View>
+          <View style={styles.badgeSlap}>
+            <DadBandBadge />
+          </View>
+        </View>
+      </View>
+
       <View style={styles.navBar}>
         <View style={styles.navLeft}>
           <PrimaryButton
@@ -483,7 +531,7 @@ export function SongEditorScreen({ navigation, route }: Props) {
             </View>
           </View>
           <View style={styles.compactMetaField}>
-            <Text style={styles.compactFieldLabel}>Default Beats (Pills)</Text>
+            <Text style={styles.compactFieldLabel}>Default Beats</Text>
             <View style={styles.defaultBeatSelector}>
               {beatCountOptions.map((option) => (
                 <Pressable
@@ -624,6 +672,62 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     gap: 12,
+  },
+  navRow: {
+    width: '100%',
+  },
+  nameplate: {
+    backgroundColor: NAMEPLATE_BG,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: NAMEPLATE_GOLD,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 16,
+  },
+  nameplateInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nameplateText: {
+    flex: 1,
+    gap: 8,
+  },
+  nameplateTitle: {
+    fontFamily: brandDisplayFontFamily,
+    fontSize: 20,
+    fontWeight: '800',
+    color: NAMEPLATE_TEXT,
+    flexShrink: 1,
+  },
+  nameplateSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: NAMEPLATE_MUTED,
+    fontStyle: 'italic',
+  },
+  warningPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#2e1f0a',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#7a5520',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  warningPillText: {
+    fontSize: 11,
+    color: '#d4a04a',
+    fontWeight: '600',
+  },
+  badgeSlap: {
+    transform: [{ rotate: '-10deg' }],
+    shadowColor: '#000',
+    shadowOffset: { width: 3, height: 4 },
+    shadowOpacity: 0.6,
+    shadowRadius: 0,
+    elevation: 5,
   },
   navBar: {
     flexDirection: 'row',
