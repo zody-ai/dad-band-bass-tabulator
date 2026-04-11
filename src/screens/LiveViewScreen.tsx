@@ -82,7 +82,32 @@ export function LiveViewScreen({ route }: Props) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={[styles.header, isPhone && styles.headerNarrow]}>
-        <Text style={[styles.songTitle, isPhone && styles.songTitleNarrow]}>{song.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.songTitle, isPhone && styles.songTitleNarrow]} numberOfLines={1}>
+            {song.title}
+          </Text>
+          <View style={styles.renderModeSelector}>
+            {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
+              <Pressable
+                key={mode}
+                onPress={() => handleRenderModeChange(mode)}
+                style={[
+                  styles.renderModeOption,
+                  renderMode === mode && styles.renderModeOptionActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.renderModeOptionText,
+                    renderMode === mode && styles.renderModeOptionTextActive,
+                  ]}
+                >
+                  {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
         <Text style={[styles.subtitle, isPhone && styles.subtitleNarrow]}>
           {song.artist} • {song.key} • {song.tuning}
         </Text>
@@ -94,37 +119,6 @@ export function LiveViewScreen({ route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.pageSheet, isPhone && styles.pageSheetPhone]}>
-          <View
-            style={[
-              styles.pageMeta,
-              isPhone ? styles.pageMetaPhone : { width: Math.min(canvasWidth, availableCanvasWidth) },
-            ]}
-          >
-            <View style={styles.renderModeControl}>
-              <Text style={styles.renderModeLabel}>Render mode</Text>
-              <View style={styles.renderModeSelector}>
-                {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
-                  <Pressable
-                    key={mode}
-                    onPress={() => handleRenderModeChange(mode)}
-                    style={[
-                      styles.renderModeOption,
-                      renderMode === mode && styles.renderModeOptionActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.renderModeOptionText,
-                        renderMode === mode && styles.renderModeOptionTextActive,
-                      ]}
-                    >
-                      {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={isPhone || isTablet}
@@ -157,32 +151,39 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-    gap: 4,
+    paddingTop: 0,
+    paddingBottom: 4,
+    gap: 1,
   },
   headerNarrow: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 0,
+    paddingBottom: 4,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   songTitle: {
     fontSize: 32,
     fontWeight: '800',
     color: palette.liveText,
+    flex: 1,
   },
   songTitleNarrow: {
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 24,
+    lineHeight: 28,
   },
   subtitle: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     color: palette.liveMuted,
   },
   subtitleNarrow: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   content: {
     flex: 1,
@@ -198,33 +199,15 @@ const styles = StyleSheet.create({
   pageSheet: {
     width: '100%',
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
   },
   pageSheetPhone: {
     alignItems: 'stretch',
   },
-  pageMeta: {
-    maxWidth: '100%',
-    gap: 4,
-  },
-  pageMetaPhone: {
-    width: '100%',
-  },
-  renderModeControl: {
-    gap: 4,
-    marginTop: 4,
-  },
-  renderModeLabel: {
-    textTransform: 'uppercase',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    color: '#94a3b8',
-  },
   renderModeSelector: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 6,
+    flexShrink: 0,
   },
   renderModeOption: {
     paddingHorizontal: 10,

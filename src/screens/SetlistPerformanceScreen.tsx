@@ -258,9 +258,32 @@ export function SetlistPerformanceScreen({ route }: Props) {
         <Text style={[styles.setlistTitle, isPhone && styles.setlistTitleNarrow]}>
           {selectedSetlist.name}
         </Text>
-        <Text style={[styles.songTitle, isPhone && styles.songTitleNarrow]}>
-          {currentItem.song.title}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.songTitle, isPhone && styles.songTitleNarrow]} numberOfLines={1}>
+            {currentItem.song.title}
+          </Text>
+          <View style={styles.renderModeSelector}>
+            {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
+              <Pressable
+                key={mode}
+                onPress={() => handleRenderModeChange(mode)}
+                style={[
+                  styles.renderModeOption,
+                  renderMode === mode && styles.renderModeOptionActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.renderModeOptionText,
+                    renderMode === mode && styles.renderModeOptionTextActive,
+                  ]}
+                >
+                  {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
         <Text style={[styles.subtitle, isPhone && styles.subtitleNarrow]}>
           {currentItem.song.artist} • {currentItem.song.key} • {currentItem.song.tuning}
         </Text>
@@ -281,30 +304,6 @@ export function SetlistPerformanceScreen({ route }: Props) {
             <Text style={styles.pageSubheading}>
               Song {safeSongIndex + 1}/{totalSongs} • Page {safePageIndex + 1}/{pages.length}
             </Text>
-            <View style={styles.renderModeControl}>
-              <Text style={styles.renderModeLabel}>Render mode</Text>
-              <View style={styles.renderModeSelector}>
-                {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
-                  <Pressable
-                    key={mode}
-                    onPress={() => handleRenderModeChange(mode)}
-                    style={[
-                      styles.renderModeOption,
-                      renderMode === mode && styles.renderModeOptionActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.renderModeOptionText,
-                        renderMode === mode && styles.renderModeOptionTextActive,
-                      ]}
-                    >
-                      {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
           </View>
 
           <ScrollView
@@ -380,44 +379,51 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
-    gap: 3,
+    paddingTop: 0,
+    paddingBottom: 4,
+    gap: 1,
   },
   headerNarrow: {
     paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 0,
+    paddingBottom: 4,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   setlistTitle: {
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 16,
     fontWeight: '800',
     color: palette.liveAccent,
     textTransform: 'uppercase',
     letterSpacing: 0.7,
   },
   setlistTitleNarrow: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
   },
   songTitle: {
     fontSize: 28,
     fontWeight: '800',
     color: palette.liveText,
+    flex: 1,
   },
   songTitleNarrow: {
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 21,
+    lineHeight: 24,
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
     color: palette.liveMuted,
   },
   subtitleNarrow: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
   },
   content: {
     flex: 1,
@@ -433,7 +439,7 @@ const styles = StyleSheet.create({
   pageSheet: {
     width: '100%',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
   },
   pageSheetPhone: {
     alignItems: 'stretch',
@@ -453,17 +459,10 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 4,
   },
-  renderModeLabel: {
-    textTransform: 'uppercase',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    color: '#94a3b8',
-  },
   renderModeSelector: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 6,
+    flexShrink: 0,
   },
   renderModeOption: {
     paddingHorizontal: 10,

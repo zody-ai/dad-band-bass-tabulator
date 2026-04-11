@@ -110,7 +110,7 @@ export function UpgradeModal({ trigger, onClose }: UpgradeModalProps) {
             }}
           >
             <Text style={styles.primaryButtonLabel}>
-              {isLoading ? 'Unlocking Pro...' : 'Start 7-Day Free Trial'}
+              {isLoading ? 'Unlocking Pro...' : `Buy Now - ${priceLabel}/month`}
             </Text>
           </Pressable>
 
