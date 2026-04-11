@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,14 +14,17 @@ import {
   createBassTabApiFromEnv,
   fromPlaylistDto,
   fromSongDto,
+  type SongMetadataDto,
   type SongDto,
 } from '../api';
 import { FREE_SETLIST_TITLE } from '../constants/setlist';
 import { tuningOptions } from '../constants/tunings';
+import { useAuth } from '../features/auth/state/useAuth';
 import { useSubscription } from '../features/subscription/SubscriptionContext';
 import { FREE_PLAN_LIMITS } from '../features/subscription/subscriptionLimits';
 import { UpgradeGateError } from '../features/subscription/upgradePrompts';
 import { Song, SongChart, SongRow, Setlist } from '../types/models';
+import { logClientEvent } from '../utils/clientTelemetry';
 import { createId } from '../utils/ids';
 import { loadSnapshotFile, saveSnapshotFile, stateStorageLabel } from '../utils/stateSnapshot';
 import { mergeChartIntoSongRows } from '../utils/songChart';
@@ -191,6 +195,45 @@ const createDefaultSetlist = (): Setlist =>
   });
 
 const initialDefaultSetlist = createDefaultSetlist();
+const backendSongDetailTimeoutMs = 10_000;
+
+const toSongFromMetadata = (metadata: SongMetadataDto): Song => {
+  const fallbackStringCount = Number.isFinite(metadata.stringCount) && metadata.stringCount > 0
+    ? metadata.stringCount
+    : FREE_PLAN_LIMITS.strings;
+
+  return {
+    id: metadata.id,
+    title: metadata.title,
+    artist: metadata.artist,
+    key: metadata.key,
+    tuning: metadata.tuning,
+    updatedAt: metadata.updatedAt,
+    stringCount: fallbackStringCount,
+    stringNames: buildDefaultStringNames(fallbackStringCount),
+    rows: [],
+    importedPublishedSongId: metadata.importedPublishedSongId ?? null,
+  };
+};
+
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_resolve, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new Error(`Timeout after ${timeoutMs}ms (${label})`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
+};
 
 const migrateLegacySong = (legacySong: Song | LegacySong): Song => {
   if ('rows' in legacySong && Array.isArray(legacySong.rows)) {
@@ -299,6 +342,8 @@ export function BassTabProvider({ children }: PropsWithChildren) {
   const [setlists, setSetlists] = useState<Setlist[]>([initialDefaultSetlist]);
   const [activeSetlistId, setActiveSetlistId] = useState(initialDefaultSetlist.id);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const hydratedBackendUserIdRef = useRef<string | null>(null);
+  const { authState } = useAuth();
   const { tier, capabilities, capabilityDefaults } = useSubscription();
   const fallbackFreeCapabilities = capabilityDefaults?.free ?? {
     maxSongs: FREE_PLAN_LIMITS.songs,
@@ -311,6 +356,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
   const backendBaseUrl = process.env.EXPO_PUBLIC_BASSTAB_API_URL?.trim();
   const backendApi = useMemo(() => createBassTabApiFromEnv(), []);
   const backendStorageLabel = 'BassTab backend';
+  const authenticatedUserId = authState.type === 'AUTHENTICATED' ? authState.user.id : null;
 
   const setlist = useMemo(
     () => setlists.find((item) => item.id === activeSetlistId) ?? setlists[0] ?? createDefaultSetlist(),
@@ -328,51 +374,66 @@ export function BassTabProvider({ children }: PropsWithChildren) {
       throw new Error('BassTab backend is not configured.');
     }
 
+    logClientEvent('info', 'basstab.hydrate_backend_start');
+
     const [songsMetadata, playlistDto] = await Promise.all([
       backendApi.listSongs(),
       backendApi.getPlaylist(),
     ]);
-    const songResults = await Promise.allSettled(
-      songsMetadata.map((songMetadata) => backendApi.getSong(songMetadata.id)),
-    );
-    const failedCount = songResults.filter((r) => r.status === 'rejected').length;
-    if (failedCount > 0) {
-      console.warn(`[BassTab] hydrateFromBackend: ${failedCount} of ${songResults.length} songs failed to load`);
-    }
-    const nextSongs = songResults.map((result, index) => {
-      if (result.status === 'fulfilled') {
-        return fromSongDto(result.value);
-      }
-
-      const metadata = songsMetadata[index];
-      const fallbackStringCount = Number.isFinite(metadata.stringCount) && metadata.stringCount > 0
-        ? metadata.stringCount
-        : FREE_PLAN_LIMITS.strings;
-
-      console.warn(
-        `[BassTab] hydrateFromBackend: using metadata fallback for song ${metadata.id} (${metadata.title})`,
-      );
-
-      return {
-        id: metadata.id,
-        title: metadata.title,
-        artist: metadata.artist,
-        key: metadata.key,
-        tuning: metadata.tuning,
-        updatedAt: metadata.updatedAt,
-        stringCount: fallbackStringCount,
-        stringNames: buildDefaultStringNames(fallbackStringCount),
-        rows: [],
-        importedPublishedSongId: metadata.importedPublishedSongId ?? null,
-      };
-    });
-    const knownSongIds = new Set(nextSongs.map((song) => song.id));
+    const metadataSongs = songsMetadata.map(toSongFromMetadata);
+    const knownSongIds = new Set(metadataSongs.map((song) => song.id));
     const playlist = fromPlaylistDto(playlistDto);
     const normalizedPlaylist = normalizeSetlist(sanitizeSetlistSongIds(playlist, knownSongIds));
 
-    setSongs(nextSongs);
+    // Apply metadata immediately so Library can render even if chart-detail calls fail or time out.
+    setSongs(metadataSongs);
     setSetlists([normalizedPlaylist]);
     setActiveSetlistId(normalizedPlaylist.id);
+
+    logClientEvent('info', 'basstab.hydrate_backend_metadata_applied', {
+      metadataCount: songsMetadata.length,
+      playlistSongCount: normalizedPlaylist.songIds.length,
+    });
+
+    const songResults = await Promise.allSettled(
+      songsMetadata.map((songMetadata) =>
+        withTimeout(
+          backendApi.getSong(songMetadata.id),
+          backendSongDetailTimeoutMs,
+          `getSong(${songMetadata.id})`,
+        )),
+    );
+    const detailSongById = new Map<string, Song>();
+    const failedSongIds: string[] = [];
+
+    songResults.forEach((result, index) => {
+      const songId = songsMetadata[index].id;
+
+      if (result.status === 'fulfilled') {
+        detailSongById.set(songId, fromSongDto(result.value));
+        return;
+      }
+
+      failedSongIds.push(songId);
+      console.warn(`[BassTab] hydrateFromBackend: song detail unavailable for ${songId}`, result.reason);
+    });
+
+    const nextSongs = songsMetadata.map((songMetadata) =>
+      detailSongById.get(songMetadata.id) ?? toSongFromMetadata(songMetadata));
+    setSongs(nextSongs);
+
+    if (failedSongIds.length > 0) {
+      logClientEvent('warn', 'basstab.hydrate_backend_song_detail_partial', {
+        metadataCount: songsMetadata.length,
+        detailCount: detailSongById.size,
+        failedCount: failedSongIds.length,
+        failedSongIds,
+      });
+    } else {
+      logClientEvent('info', 'basstab.hydrate_backend_song_detail_complete', {
+        metadataCount: songsMetadata.length,
+      });
+    }
   };
 
   useEffect(() => {
@@ -446,10 +507,34 @@ export function BassTabProvider({ children }: PropsWithChildren) {
 
     const hydrate = async () => {
       if (backendApi) {
+        if (authState.type !== 'AUTHENTICATED') {
+          hydratedBackendUserIdRef.current = null;
+          const clearedSetlist = createDefaultSetlist();
+          setSongs([]);
+          setSetlists([clearedSetlist]);
+          setActiveSetlistId(clearedSetlist.id);
+          if (isMounted) {
+            setHasHydrated(true);
+          }
+          return;
+        }
+
+        if (hydratedBackendUserIdRef.current === authenticatedUserId) {
+          if (isMounted) {
+            setHasHydrated(true);
+          }
+          return;
+        }
+
+        hydratedBackendUserIdRef.current = authenticatedUserId;
+
         try {
           await hydrateFromBackend();
         } catch (error) {
           console.warn('BassTab backend hydrate failed', error);
+          logClientEvent('error', 'basstab.hydrate_backend_failed', {
+            error: error instanceof Error ? error.message : String(error),
+          });
         } finally {
           if (isMounted) {
             setHasHydrated(true);
@@ -474,7 +559,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     return () => {
       isMounted = false;
     };
-  }, [backendApi]);
+  }, [authState.type, authenticatedUserId, backendApi]);
 
   useEffect(() => {
     if (!hasHydrated) {

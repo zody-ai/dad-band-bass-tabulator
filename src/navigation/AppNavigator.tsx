@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -35,7 +35,6 @@ import { SetlistScreen } from '../screens/SetlistScreen';
 import { SongEditorScreen } from '../screens/SongEditorScreen';
 import { UpgradeScreen } from '../screens/UpgradeScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
-import { useBassTab } from '../store/BassTabProvider';
 import { RootStackParamList, TabParamList } from './types';
 import { SongEditorErrorBoundary } from '../components/SongEditorErrorBoundary';
 
@@ -201,26 +200,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
 
 export function AppNavigator() {
   const { authState } = useAuth();
-  const { loadStateFromFile } = useBassTab();
   const isAuthenticated = authState.type === 'AUTHENTICATED';
   const initialRouteName: keyof RootStackParamList = 'Landing';
-  const hydratedUserIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (authState.type !== 'AUTHENTICATED') {
-      hydratedUserIdRef.current = null;
-      return;
-    }
-
-    if (hydratedUserIdRef.current === authState.user.id) {
-      return;
-    }
-
-    hydratedUserIdRef.current = authState.user.id;
-    void loadStateFromFile().catch((error) => {
-      console.warn('Failed to hydrate song state after auth', error);
-    });
-  }, [authState, loadStateFromFile]);
 
   return (
     <NavigationContainer theme={defaultTheme} linking={linking}>
