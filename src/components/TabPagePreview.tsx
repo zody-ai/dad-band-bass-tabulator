@@ -306,8 +306,6 @@ function AsciiTabPagePreview({
   );
 }
 
-const SVG_ROW_PADDING = 12;
-const SVG_NOTATION_TOP_INSET = 36;
 const SVG_LINE_STROKE = 1;
 const SVG_BAR_STROKE = 1.4;
 const SVG_HOLD4_RADIUS = 12;
@@ -326,6 +324,8 @@ const SVG_SCALE_PROFILES: Record<
     slotWidth: number;
     slotGap: number;
     rowGap: number;
+    rowPadding: number;
+    notationTopInset: number;
     labelColumnWidth: number;
     stringSpacing: number;
     minRowWidth: number;
@@ -351,6 +351,8 @@ const SVG_SCALE_PROFILES: Record<
     slotWidth: 22,
     slotGap: 5,
     rowGap: 10,
+    rowPadding: 12,
+    notationTopInset: 36,
     labelColumnWidth: 24,
     stringSpacing: 26,
     minRowWidth: 240,
@@ -374,26 +376,28 @@ const SVG_SCALE_PROFILES: Record<
   performance: {
     slotWidth: 28,
     slotGap: 6,
-    rowGap: 14,
+    rowGap: 7,
+    rowPadding: 8,
+    notationTopInset: 18,
     labelColumnWidth: 30,
-    stringSpacing: 34,
+    stringSpacing: 17,
     minRowWidth: 320,
-    minRowHeight: 128,
+    minRowHeight: 72,
     minSlotAdvance: 12,
-    fretFontSize: 22,
+    fretFontSize: 14,
     noteMargin: 52,
-    stemHeight: 36,
-    annotationFontSize: 22,
-    annotationLineHeight: 30,
-    compactAnnotationFontSize: 18,
-    compactAnnotationLineHeight: 24,
-    labelFontSize: 18,
-    labelLineHeight: 28,
-    compactLabelFontSize: 16,
-    barNoteFontSize: 18,
-    barNoteLineHeight: 24,
-    compactBarNoteFontSize: 16,
-    compactBarNoteLineHeight: 22,
+    stemHeight: 18,
+    annotationFontSize: 16,
+    annotationLineHeight: 20,
+    compactAnnotationFontSize: 14,
+    compactAnnotationLineHeight: 18,
+    labelFontSize: 14,
+    labelLineHeight: 16,
+    compactLabelFontSize: 12,
+    barNoteFontSize: 14,
+    barNoteLineHeight: 16,
+    compactBarNoteFontSize: 12,
+    compactBarNoteLineHeight: 14,
   },
 };
 
@@ -444,7 +448,7 @@ function SvgTabPagePreview({
           160,
           resolvedViewportWidth - svgScale.labelColumnWidth - svgScale.rowGap,
         );
-        const fixedSvgWidth = SVG_ROW_PADDING * 2 + svgScale.noteMargin;
+        const fixedSvgWidth = svgScale.rowPadding * 2 + svgScale.noteMargin;
         const availableGridWidth = Math.max(1, maxSvgWidth - fixedSvgWidth);
         const slotAdvance =
           totalSlotCount > 0
@@ -461,10 +465,12 @@ function SvgTabPagePreview({
         );
         const stringPositions =
           stringNames.length > 0
-            ? stringNames.map((_, index) => SVG_ROW_PADDING + SVG_NOTATION_TOP_INSET + index * svgScale.stringSpacing)
-            : [SVG_ROW_PADDING];
+            ? stringNames.map(
+              (_, index) => svgScale.rowPadding + svgScale.notationTopInset + index * svgScale.stringSpacing,
+            )
+            : [svgScale.rowPadding];
         const svgHeight = Math.max(
-          (stringPositions[stringPositions.length - 1] ?? SVG_ROW_PADDING) + SVG_ROW_PADDING,
+          (stringPositions[stringPositions.length - 1] ?? svgScale.rowPadding) + svgScale.rowPadding,
           svgScale.minRowHeight,
         );
         const lineColor = isDark ? palette.liveText : palette.border;
@@ -490,7 +496,7 @@ function SvgTabPagePreview({
                 compact={compact}
                 dark={isDark}
                 mode="svg"
-                leftInset={svgScale.labelColumnWidth + svgScale.rowGap + SVG_ROW_PADDING}
+                leftInset={svgScale.labelColumnWidth + svgScale.rowGap + svgScale.rowPadding}
                 svgScaleProfile={svgScaleProfile}
               />
             ) : null}
@@ -500,7 +506,7 @@ function SvgTabPagePreview({
                 notes={annotation.barNotes.slice(0, rowBars.length)}
                 compact={compact}
                 dark={isDark}
-                leftInset={svgScale.labelColumnWidth + svgScale.rowGap + SVG_ROW_PADDING}
+                leftInset={svgScale.labelColumnWidth + svgScale.rowGap + svgScale.rowPadding}
                 barWidths={rowBars.map((bar) => getBarSlotCount(bar) * slotAdvance)}
                 svgScaleProfile={svgScaleProfile}
               />
@@ -513,7 +519,7 @@ function SvgTabPagePreview({
                   {
                     height: svgHeight + 4,
                     width: svgScale.labelColumnWidth,
-                    paddingTop: SVG_NOTATION_TOP_INSET,
+                    paddingTop: svgScale.notationTopInset,
                   },
                 ]}
               >
@@ -539,8 +545,8 @@ function SvgTabPagePreview({
                 {stringPositions.map((position, stringIndex) => (
                   <Line
                     key={`svg-string-${stringIndex}`}
-                    x1={SVG_ROW_PADDING}
-                    x2={svgWidth - SVG_ROW_PADDING}
+                    x1={svgScale.rowPadding}
+                    x2={svgWidth - svgScale.rowPadding}
                     y1={position}
                     y2={position}
                     stroke={lineColor}
@@ -553,7 +559,7 @@ function SvgTabPagePreview({
                     lineIndex === effectiveBarCount
                       ? totalSlotCount
                       : cumulativeBarOffsets[lineIndex] ?? 0;
-                  const xPosition = SVG_ROW_PADDING + slotOffset * slotAdvance;
+                  const xPosition = svgScale.rowPadding + slotOffset * slotAdvance;
                   return (
                     <Line
                       key={`svg-bar-${lineIndex}`}
@@ -579,7 +585,7 @@ function SvgTabPagePreview({
                         const renderedValue = trimmed.replace(/-+$/g, '') || trimmed;
                         const isTimedNote = isNumericTabValue(trimmed);
                         const fretX =
-                          SVG_ROW_PADDING +
+                          svgScale.rowPadding +
                           (cumulativeBarOffsets[barIndex] ?? 0) * slotAdvance +
                           slotIndex * slotAdvance +
                           svgScale.slotWidth / 2;
@@ -665,7 +671,7 @@ function SvgTabPagePreview({
                 compact={compact}
                 dark={isDark}
                 mode="svg"
-                leftInset={svgScale.labelColumnWidth + svgScale.rowGap + SVG_ROW_PADDING}
+                leftInset={svgScale.labelColumnWidth + svgScale.rowGap + svgScale.rowPadding}
                 svgScaleProfile={svgScaleProfile}
               />
             ) : null}
