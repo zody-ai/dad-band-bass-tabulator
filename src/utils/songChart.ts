@@ -91,7 +91,10 @@ export const mergeChartIntoSongRows = (
       bars: nextRowBars.map((bar, barIndex) => ({
         ...bar,
         beatCount: normalizeBeatCount(bar.beatCount ?? defaultBeatCount),
-        note: annotation.barNotes[barIndex]?.trim() ? annotation.barNotes[barIndex].trim() : undefined,
+        note:
+          annotation.barNotes[barIndex] !== undefined && annotation.barNotes[barIndex].length > 0
+            ? annotation.barNotes[barIndex]
+            : undefined,
       })),
     };
   });

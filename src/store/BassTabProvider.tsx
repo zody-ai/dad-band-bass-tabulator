@@ -11,9 +11,10 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
-  createBassTabApiFromEnv,
+  createBassTabApi,
   fromPlaylistDto,
   fromSongDto,
+  resolveBassTabApiBaseUrlFromEnv,
   type SongMetadataDto,
   type SongDto,
 } from '../api';
@@ -342,7 +343,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
   const [setlists, setSetlists] = useState<Setlist[]>([initialDefaultSetlist]);
   const [activeSetlistId, setActiveSetlistId] = useState(initialDefaultSetlist.id);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const hydratedBackendUserIdRef = useRef<string | null>(null);
+  const hydratedBackendSessionKeyRef = useRef<string | null>(null);
   const { authState } = useAuth();
   const { tier, capabilities, capabilityDefaults } = useSubscription();
   const fallbackFreeCapabilities = capabilityDefaults?.free ?? {
@@ -353,10 +354,15 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     maxStringCount: FREE_PLAN_LIMITS.strings,
     svgEnabled: false,
   };
-  const backendBaseUrl = process.env.EXPO_PUBLIC_BASSTAB_API_URL?.trim();
-  const backendApi = useMemo(() => createBassTabApiFromEnv(), []);
+  const backendBaseUrl = resolveBassTabApiBaseUrlFromEnv();
+  const backendApi = useMemo(
+    () => (backendBaseUrl ? createBassTabApi({ baseUrl: backendBaseUrl }) : null),
+    [backendBaseUrl],
+  );
   const backendStorageLabel = 'BassTab backend';
   const authenticatedUserId = authState.type === 'AUTHENTICATED' ? authState.user.id : null;
+  const backendSessionKey =
+    backendBaseUrl && authenticatedUserId ? `${backendBaseUrl}::${authenticatedUserId}` : null;
 
   const setlist = useMemo(
     () => setlists.find((item) => item.id === activeSetlistId) ?? setlists[0] ?? createDefaultSetlist(),
@@ -508,7 +514,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     const hydrate = async () => {
       if (backendApi) {
         if (authState.type !== 'AUTHENTICATED') {
-          hydratedBackendUserIdRef.current = null;
+          hydratedBackendSessionKeyRef.current = null;
           const clearedSetlist = createDefaultSetlist();
           setSongs([]);
           setSetlists([clearedSetlist]);
@@ -519,14 +525,14 @@ export function BassTabProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        if (hydratedBackendUserIdRef.current === authenticatedUserId) {
+        if (hydratedBackendSessionKeyRef.current === backendSessionKey) {
           if (isMounted) {
             setHasHydrated(true);
           }
           return;
         }
 
-        hydratedBackendUserIdRef.current = authenticatedUserId;
+        hydratedBackendSessionKeyRef.current = backendSessionKey;
 
         try {
           await hydrateFromBackend();
@@ -559,7 +565,7 @@ export function BassTabProvider({ children }: PropsWithChildren) {
     return () => {
       isMounted = false;
     };
-  }, [authState.type, authenticatedUserId, backendApi]);
+  }, [authState.type, authenticatedUserId, backendApi, backendSessionKey]);
 
   useEffect(() => {
     if (!hasHydrated) {

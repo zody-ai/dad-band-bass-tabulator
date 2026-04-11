@@ -8,7 +8,6 @@ import { AppSectionNav } from '../components/AppSectionNav';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { SectionEditorCard } from '../components/SectionEditorCard';
-import { TabPagePreview } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
 import { brandDisplayFontFamily } from '../constants/typography';
 import { tuningOptions } from '../constants/tunings';
@@ -32,8 +31,6 @@ import { createBassTabApiFromEnv } from '../api';
 import { usePublishedSongLookup } from '../hooks/usePublishedSongLookup';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SongEditor'>;
-
-type EditorMode = 'edit' | 'preview';
 type SaveState = 'idle' | 'saving' | 'saved';
 
 const NAMEPLATE_BG = '#1a120a';
@@ -82,14 +79,13 @@ const STRING_COUNT_OPTIONS = [4, 5];
 
 export function SongEditorScreen({ navigation, route }: Props) {
   const { songId, isNew = false } = route.params;
-  const { tier, capabilities } = useSubscription();
+  const { capabilities } = useSubscription();
   const { showUpgradePrompt } = useUpgradePrompt();
   const { songs, updateSong } = useBassTab();
   const backendApi = useMemo(() => createBassTabApiFromEnv(), []);
   const { lookup: publishedLookup } = usePublishedSongLookup(backendApi);
   const { authState } = useAuth();
   const currentUserId = authState.type === 'AUTHENTICATED' ? authState.user.id : null;
-  const [mode, setMode] = useState<EditorMode>('edit');
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [hasSavedOnce, setHasSavedOnce] = useState(!isNew);
   const [draftSong, setDraftSong] = useState<Song | null>(null);
@@ -151,19 +147,6 @@ export function SongEditorScreen({ navigation, route }: Props) {
     }
   }, [editorSong]);
 
-  const parsedChart = useMemo(() => {
-    if (!chart) {
-      return null;
-    }
-
-    try {
-      return parseTab(chart.tab);
-    } catch (error) {
-      console.error('[SongEditor] parseTab(chart.tab) failed', { error, chart });
-      throw error;
-    }
-  }, [chart]);
-
   const publishedInfo = song ? publishedLookup[song.id] : undefined;
   const lockMetadata =
     Boolean(publishedInfo) &&
@@ -190,7 +173,7 @@ export function SongEditorScreen({ navigation, route }: Props) {
     [],
   );
 
-  if (!song || !editorSong || !chart || !parsedChart) {
+  if (!song || !editorSong || !chart) {
     return (
       <ScreenContainer contentStyle={styles.centered}>
         <EmptyState
@@ -358,15 +341,6 @@ export function SongEditorScreen({ navigation, route }: Props) {
     navigation.navigate('PerformanceView', { songId: editorSong.id });
   };
 
-  const handleExportPdf = () => {
-    if (tier !== 'PRO') {
-      showUpgradePrompt('PDF_EXPORT');
-      return;
-    }
-
-    navigation.navigate('ExportSong', { songId: editorSong.id });
-  };
-
   const saveButtonLabel = !hasSavedOnce ? 'Create Song' : 'Save Changes';
 
   const saveStateText =
@@ -422,27 +396,6 @@ export function SongEditorScreen({ navigation, route }: Props) {
             variant="secondary"
             size="compact"
           />
-        </View>
-        <View style={styles.modeSwitcher}>
-          {(['edit', 'preview'] as EditorMode[]).map((value) => (
-            <Pressable
-              key={value}
-              onPress={() => setMode(value)}
-              style={[
-                styles.modeOption,
-                mode === value && styles.modeOptionActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.modeLabel,
-                  mode === value && styles.modeLabelActive,
-                ]}
-              >
-                {value === 'edit' ? 'Edit' : 'Preview'}
-              </Text>
-            </Pressable>
-          ))}
         </View>
       </View>
 
@@ -562,85 +515,46 @@ export function SongEditorScreen({ navigation, route }: Props) {
         contentContainerStyle={styles.editorScrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {mode === 'edit' ? (
+        {isNewEmpty ? (
           <>
-            {isNewEmpty ? (
-              <View style={styles.newSongStart}>
-                <Text style={styles.newSongStartText}>
-                  Configure your strings, tuning, and beats per bar above, then start writing.
-                </Text>
-                <PrimaryButton
-                  label="Start Writing"
-                  onPress={handleStartEditing}
-                />
-              </View>
-            ) : (
-              <>
-                {lockMetadata ? (
-                  <Text style={styles.lockedMetaText}>
-                    Title, artist, key, and tuning are locked while you own this song in the community. Republish after editing to push changes, or release it to edit freely.
-                  </Text>
-                ) : null}
-
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Tab Editor</Text>
-                  <Text style={styles.sectionMeta}>
-                    Last updated {formatUpdatedAt(song.updatedAt)}
-                  </Text>
-                </View>
-
-                <SectionEditorCard
-                  key={chart.id}
-                  section={chart}
-                  index={0}
-                  isFirst
-                  isLast
-                  showSectionControls={false}
-                  saveSignal={saveSignal}
-                  onChange={handleChartChange}
-                  onMoveUp={() => {}}
-                  onMoveDown={() => {}}
-                  onDelete={() => {}}
-                />
-              </>
-            )}
+            <View style={styles.newSongStart}>
+              <Text style={styles.newSongStartText}>
+                Configure your strings, tuning, and beats per bar above, then start writing.
+              </Text>
+              <PrimaryButton
+                label="Start Writing"
+                onPress={handleStartEditing}
+              />
+            </View>
           </>
         ) : (
           <>
-            <View style={styles.previewCard}>
-              <Text style={styles.previewTitle}>Performance Preview</Text>
-              <Text style={styles.previewSubtitle}>
-                Stage-focused view of your chart before rehearsal.
+            {lockMetadata ? (
+              <Text style={styles.lockedMetaText}>
+                Title, artist, key, and tuning are locked while you own this song in the community. Republish after editing to push changes, or release it to edit freely.
               </Text>
-              <TabPagePreview
-                stringNames={parsedChart.stringNames}
-                bars={parsedChart.bars}
-                rowAnnotations={chart.rowAnnotations}
-                rowBarCounts={chart.rowBarCounts}
-                renderMode={capabilities.svgEnabled ? 'svg' : 'ascii'}
-                svgScaleProfile="performance"
-              />
+            ) : null}
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Tab Editor</Text>
+              <Text style={styles.sectionMeta}>
+                Last updated {formatUpdatedAt(song.updatedAt)}
+              </Text>
             </View>
 
-            <View style={styles.previewActions}>
-              <PrimaryButton
-                label="Open Performance View"
-                onPress={handleOpenPerformance}
-                variant="secondary"
-              />
-              <View style={styles.exportActionRow}>
-                <PrimaryButton
-                  label="Export Print PDF"
-                  onPress={handleExportPdf}
-                  variant="ghost"
-                />
-                {tier !== 'PRO' ? (
-                  <View style={styles.proBadge}>
-                    <Text style={styles.proBadgeText}>PRO</Text>
-                  </View>
-                ) : null}
-              </View>
-            </View>
+            <SectionEditorCard
+              key={chart.id}
+              section={chart}
+              index={0}
+              isFirst
+              isLast
+              showSectionControls={false}
+              saveSignal={saveSignal}
+              onChange={handleChartChange}
+              onMoveUp={() => {}}
+              onMoveDown={() => {}}
+              onDelete={() => {}}
+            />
           </>
         )}
       </ScrollView>
@@ -868,33 +782,6 @@ const styles = StyleSheet.create({
   defaultBeatPillTextActive: {
     color: palette.primary,
   },
-  modeSwitcher: {
-    flexDirection: 'row',
-    gap: 4,
-    padding: 3,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.surface,
-    alignSelf: 'flex-start',
-  },
-  modeOption: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    backgroundColor: 'transparent',
-  },
-  modeOptionActive: {
-    backgroundColor: palette.primaryMuted,
-  },
-  modeLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.textMuted,
-  },
-  modeLabelActive: {
-    color: palette.primary,
-  },
   editorScroll: {
     flex: 1,
   },
@@ -932,45 +819,6 @@ const styles = StyleSheet.create({
     color: '#fbbf24',
     marginBottom: 6,
     marginHorizontal: 2,
-  },
-  previewCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.surface,
-    padding: 14,
-    gap: 10,
-  },
-  previewTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: palette.text,
-  },
-  previewSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: palette.textMuted,
-  },
-  previewActions: {
-    gap: 10,
-  },
-  exportActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  proBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    backgroundColor: '#1e293b',
-  },
-  proBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: '#bfdbfe',
   },
   saveDock: {
     borderRadius: 16,

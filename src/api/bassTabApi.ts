@@ -591,17 +591,31 @@ const isProductionRuntime =
     typeof (globalThis as { __DEV__?: unknown }).__DEV__ === 'boolean' &&
     !(globalThis as { __DEV__?: boolean }).__DEV__);
 
-export const createBassTabApiFromEnv = (): BassTabApi | null => {
+export const resolveBassTabApiBaseUrlFromEnv = (): string | null => {
   const baseUrl = process.env.EXPO_PUBLIC_BASSTAB_API_URL?.trim();
 
   if (baseUrl) {
-    console.info('[BassTabApi] env backend base URL detected', baseUrl);
-    return createBassTabApi({ baseUrl });
+    return trimTrailingSlash(baseUrl);
   }
 
   if (isProductionRuntime) {
-    console.info('[BassTabApi] production runtime detected, using default API host', productionBaseUrl);
-    return createBassTabApi({ baseUrl: productionBaseUrl });
+    return productionBaseUrl;
+  }
+
+  return null;
+};
+
+export const createBassTabApiFromEnv = (): BassTabApi | null => {
+  const envBaseUrl = process.env.EXPO_PUBLIC_BASSTAB_API_URL?.trim();
+  const baseUrl = resolveBassTabApiBaseUrlFromEnv();
+
+  if (baseUrl) {
+    if (envBaseUrl) {
+      console.info('[BassTabApi] env backend base URL detected', baseUrl);
+    } else {
+      console.info('[BassTabApi] production runtime detected, using default API host', baseUrl);
+    }
+    return createBassTabApi({ baseUrl });
   }
 
   return null;

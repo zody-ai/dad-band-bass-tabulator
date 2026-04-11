@@ -8,7 +8,7 @@ import {
   useRef,
 } from 'react';
 
-import { createAuthApiFromEnv } from '../api/authApi.ts';
+import { AuthApi, resolveAuthApiBaseUrlFromEnv } from '../api/authApi.ts';
 import { subscribeBassTabApiUnauthorized } from '../../../api/bassTabApi';
 import { logClientEvent } from '../../../utils/clientTelemetry';
 import { createAuthActions } from './authActions.ts';
@@ -23,7 +23,11 @@ interface AuthContextValue extends AuthStoreState, AuthActions {}
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const api = useMemo(() => createAuthApiFromEnv(), []);
+  const authApiBaseUrl = resolveAuthApiBaseUrlFromEnv();
+  const api = useMemo(
+    () => (authApiBaseUrl ? new AuthApi({ baseUrl: authApiBaseUrl }) : null),
+    [authApiBaseUrl],
+  );
   const [state, dispatch] = useReducer(authReducer, initialAuthStoreState);
   const stateRef = useRef(state);
   const authenticatedSinceRef = useRef<number>(0);

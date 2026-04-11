@@ -132,6 +132,7 @@ export function SectionEditorCard({
   const { showUpgradePrompt } = useUpgradePrompt();
   const isPreviewCompact = width < 760;
   const isCompactLayout = width < 760;
+  const editorSvgViewportWidth = Math.max(260, width - (isPreviewCompact ? 72 : 148));
   const [activeRowIndex, setActiveRowIndex] = useState(-1);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [copiedBlock, setCopiedBlock] = useState<{
@@ -574,7 +575,7 @@ export function SectionEditorCard({
                         Bars {row.startBarIndex + 1}-{lastBarNumber}
                         {row.annotation.beforeText ||
                         row.annotation.afterText ||
-                        row.annotation.barNotes.some((note) => note.trim().length > 0)
+                        row.annotation.barNotes.some((note) => note.length > 0)
                           ? ' • annotations added'
                           : ''}
                       </Text>
@@ -594,6 +595,8 @@ export function SectionEditorCard({
                               rowBarCounts={[row.barCount]}
                               compact
                               renderMode={renderMode}
+                              svgScaleProfile="performance"
+                              svgViewportWidth={editorSvgViewportWidth}
                               style={styles.rowMiniPreview}
                             />
                           </ScrollView>
@@ -605,6 +608,8 @@ export function SectionEditorCard({
                             rowBarCounts={[row.barCount]}
                             compact
                             renderMode={renderMode}
+                            svgScaleProfile="performance"
+                            svgViewportWidth={editorSvgViewportWidth}
                             style={styles.rowMiniPreview}
                           />
                         )
@@ -790,6 +795,8 @@ export function SectionEditorCard({
                       rowBarCounts={rowBarCounts}
                       compact={isPreviewCompact}
                       renderMode={quickPreviewRenderMode}
+                      svgScaleProfile="performance"
+                      svgViewportWidth={editorSvgViewportWidth}
                     />
                   </View>
                 </ScrollView>
@@ -2089,13 +2096,13 @@ function BarInlineNoteField({
   onChangeText: (value: string) => void;
   collapseKey: string;
 }) {
-  const [isExpanded, setIsExpanded] = useState(value.trim().length > 0);
+  const [isExpanded, setIsExpanded] = useState(value.length > 0);
 
   useEffect(() => {
-    setIsExpanded(value.trim().length > 0);
+    setIsExpanded(value.length > 0);
   }, [collapseKey, value]);
 
-  const hasContent = value.trim().length > 0;
+  const hasContent = value.length > 0;
   const showExpanded = hasContent || isExpanded;
 
   if (!showExpanded) {

@@ -234,7 +234,7 @@ const buildBarNoteGuide = (rowBars: ParsedBar[], barNotes: string[] = []) =>
   joinRenderedBars(
     rowBars.map((bar, index) => {
       const barTextWidth = getBarTextWidth(bar);
-      return `|${(barNotes[index] ?? '').trim().slice(0, barTextWidth).padEnd(barTextWidth, ' ')}`;
+      return `|${(barNotes[index] ?? '').slice(0, barTextWidth).padEnd(barTextWidth, ' ')}`;
     }),
   );
 
@@ -259,7 +259,7 @@ export const buildTabPagePreview = (
       rows.push(`[${annotation.beforeText.trim()}]`);
     }
 
-    if (annotation?.barNotes?.some((note) => note.trim())) {
+    if (annotation?.barNotes?.some((note) => note.length > 0)) {
       rows.push(buildBarNoteGuide(rowBars, annotation.barNotes.slice(0, rowBars.length)));
     }
 

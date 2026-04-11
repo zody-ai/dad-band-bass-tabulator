@@ -69,7 +69,7 @@ const joinRenderedBars = (segments: string[]) =>
   segments.map((segment, index) => (index === 0 ? segment : segment.slice(1))).join('');
 
 const renderAsciiBarNotes = (rowBars: ParsedBar[], barNotes: string[], prefixChars: number) => {
-  if (!barNotes.some((note) => note.trim())) {
+  if (!barNotes.some((note) => note.length > 0)) {
     return '';
   }
 
@@ -79,7 +79,7 @@ const renderAsciiBarNotes = (rowBars: ParsedBar[], barNotes: string[], prefixCha
       const slots = getBarSlotCount(bar);
       const barTextWidth = slots * 2;
       const noteTextWidth = Math.max(0, barTextWidth - 1);
-      return `| ${(barNotes[index] ?? '').trim().slice(0, noteTextWidth).padEnd(noteTextWidth, ' ')}`;
+      return `| ${(barNotes[index] ?? '').slice(0, noteTextWidth).padEnd(noteTextWidth, ' ')}`;
     }),
   );
 
@@ -252,7 +252,7 @@ function AsciiTabPagePreview({
               />
             ) : null}
 
-            {annotation?.barNotes?.some((note) => note.trim()) ? (
+            {annotation?.barNotes?.some((note) => note.length > 0) ? (
               <Text
                 style={[
                   compact ? styles.compactTabText : styles.tabText,
@@ -501,7 +501,7 @@ function SvgTabPagePreview({
               />
             ) : null}
 
-            {annotation?.barNotes?.some((note) => note.trim()) ? (
+            {annotation?.barNotes?.some((note) => note.length > 0) ? (
               <BarNotesRow
                 notes={annotation.barNotes.slice(0, rowBars.length)}
                 compact={compact}
@@ -512,13 +512,14 @@ function SvgTabPagePreview({
               />
             ) : null}
 
-            <View style={[styles.svgRowContent, { minHeight: svgHeight, gap: svgScale.rowGap }]}>
+            <View style={[styles.svgRowContent, { minHeight: svgHeight }]}>
               <View
                 style={[
                   styles.svgLabelColumn,
                   {
                     height: svgHeight + 4,
                     width: svgScale.labelColumnWidth,
+                    marginRight: svgScale.rowGap,
                     paddingTop: svgScale.notationTopInset,
                   },
                 ]}
@@ -777,7 +778,7 @@ function BarNotesRow({
               { width: barWidths[index] ?? barWidths[barWidths.length - 1] ?? 0 },
             ]}
           >
-            {note.trim()}
+            {note}
           </Text>
         ))}
       </View>
@@ -830,7 +831,6 @@ const styles = StyleSheet.create({
   },
   barNoteCell: {
     textAlign: 'left',
-    paddingRight: 4,
   },
   annotationText: {
     fontFamily: monoFontFamily,
