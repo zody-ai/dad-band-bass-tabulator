@@ -14,6 +14,7 @@ import { flattenSongRowsToChart } from '../utils/songChart';
 import { ParsedBar, parseTab } from '../utils/tabLayout';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SetlistPerformance'>;
+type PerformanceTone = 'light' | 'dark';
 
 interface PerformancePage {
   bars: ParsedBar[];
@@ -82,6 +83,8 @@ export function SetlistPerformanceScreen({ route }: Props) {
   const { width } = useWindowDimensions();
   const { songs, setlists, activeSetlistId } = useBassTab();
   const [renderMode, setRenderMode] = useState<TabPreviewRenderMode>('ascii');
+  const [tone, setTone] = useState<PerformanceTone>('dark');
+  const hasAutoSelectedSvgModeRef = useRef(false);
   const [songIndex, setSongIndex] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
   const appliedStartSongIdRef = useRef<string | null>(null);
@@ -186,6 +189,22 @@ export function SetlistPerformanceScreen({ route }: Props) {
 
     setRenderMode(mode);
   };
+  const handleToneChange = (nextTone: PerformanceTone) => {
+    setTone(nextTone);
+  };
+
+  useEffect(() => {
+    if (hasAutoSelectedSvgModeRef.current) {
+      return;
+    }
+
+    if (!capabilities.svgEnabled) {
+      return;
+    }
+
+    hasAutoSelectedSvgModeRef.current = true;
+    setRenderMode('svg');
+  }, [capabilities.svgEnabled]);
 
   const handleNextPage = () => {
     if (!currentItem) {
@@ -262,26 +281,50 @@ export function SetlistPerformanceScreen({ route }: Props) {
           <Text style={[styles.songTitle, isPhone && styles.songTitleNarrow]} numberOfLines={1}>
             {currentItem.song.title}
           </Text>
-          <View style={styles.renderModeSelector}>
-            {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
-              <Pressable
-                key={mode}
-                onPress={() => handleRenderModeChange(mode)}
-                style={[
-                  styles.renderModeOption,
-                  renderMode === mode && styles.renderModeOptionActive,
-                ]}
-              >
-                <Text
+          <View style={styles.titleControls}>
+            <View style={styles.renderModeSelector}>
+              {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
+                <Pressable
+                  key={mode}
+                  onPress={() => handleRenderModeChange(mode)}
                   style={[
-                    styles.renderModeOptionText,
-                    renderMode === mode && styles.renderModeOptionTextActive,
+                    styles.renderModeOption,
+                    renderMode === mode && styles.renderModeOptionActive,
                   ]}
                 >
-                  {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.renderModeOptionText,
+                      renderMode === mode && styles.renderModeOptionTextActive,
+                    ]}
+                  >
+                    {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.renderModeSelector}>
+              {(['light', 'dark'] as PerformanceTone[]).map((value) => (
+                <Pressable
+                  key={value}
+                  onPress={() => handleToneChange(value)}
+                  style={[
+                    styles.renderModeOption,
+                    styles.toneModeOption,
+                    tone === value && styles.renderModeOptionActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.renderModeOptionText,
+                      tone === value && styles.renderModeOptionTextActive,
+                    ]}
+                  >
+                    {isPhone ? (value === 'light' ? 'LT' : 'DK') : value.toUpperCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </View>
         <Text style={[styles.subtitle, isPhone && styles.subtitleNarrow]}>
@@ -315,6 +358,7 @@ export function SetlistPerformanceScreen({ route }: Props) {
               style={[
                 styles.pageCanvas,
                 isPhone && styles.pageCanvasNarrow,
+                tone === 'light' ? styles.pageCanvasLight : styles.pageCanvasDark,
                 { width: canvasWidth, maxWidth: canvasWidth },
               ]}
             >
@@ -323,7 +367,7 @@ export function SetlistPerformanceScreen({ route }: Props) {
                 bars={currentPage.bars}
                 rowAnnotations={currentPage.rowAnnotations}
                 rowBarCounts={currentPage.rowBarCounts}
-                tone="dark"
+                tone={tone}
                 compact={useCompactPreview}
                 renderMode={renderMode}
                 svgScaleProfile="performance"
@@ -411,6 +455,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: palette.liveText,
     flex: 1,
+    minWidth: 0,
   },
   songTitleNarrow: {
     fontSize: 21,
@@ -461,11 +506,17 @@ const styles = StyleSheet.create({
   },
   renderModeSelector: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
+    flexShrink: 0,
+  },
+  titleControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     flexShrink: 0,
   },
   renderModeOption: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
@@ -484,6 +535,10 @@ const styles = StyleSheet.create({
   renderModeOptionTextActive: {
     color: '#dbeafe',
   },
+  toneModeOption: {
+    minWidth: 34,
+    alignItems: 'center',
+  },
   canvasScroller: {
     minWidth: '100%',
     justifyContent: 'center',
@@ -495,9 +550,15 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 24,
     paddingVertical: 28,
-    backgroundColor: '#0b1120',
     borderWidth: 1,
+  },
+  pageCanvasDark: {
+    backgroundColor: '#0b1120',
     borderColor: '#1f2937',
+  },
+  pageCanvasLight: {
+    backgroundColor: '#ffffff',
+    borderColor: '#cbd5e1',
   },
   pageCanvasNarrow: {
     borderRadius: 18,

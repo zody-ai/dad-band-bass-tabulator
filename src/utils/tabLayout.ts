@@ -234,7 +234,7 @@ const buildBarNoteGuide = (rowBars: ParsedBar[], barNotes: string[] = []) =>
   joinRenderedBars(
     rowBars.map((bar, index) => {
       const barTextWidth = getBarTextWidth(bar);
-      return `|${(barNotes[index] ?? '').slice(0, barTextWidth).padEnd(barTextWidth, ' ')}`;
+      return `|${(barNotes[index] ?? '').slice(0, barTextWidth).padEnd(barTextWidth, ' ')}|`;
     }),
   );
 

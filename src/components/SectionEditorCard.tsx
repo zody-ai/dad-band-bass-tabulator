@@ -139,6 +139,7 @@ export function SectionEditorCard({
     bars: ReturnType<typeof parseTab>['bars'];
     annotation: TabRowAnnotation;
   } | null>(null);
+  const [copiedBar, setCopiedBar] = useState<ParsedBar | null>(null);
   const [renderMode, setRenderMode] = useState<TabPreviewRenderMode>('ascii');
   const [rowEditSnapshot, setRowEditSnapshot] = useState<{
     tab: string;
@@ -729,6 +730,8 @@ export function SectionEditorCard({
                       onChartChange={commitChart}
                       onCellChange={handleCellChange}
                       onCellKeyPress={handleCellKeyPress}
+                      copiedBar={copiedBar}
+                      onCopyBar={setCopiedBar}
                     />
                   ) : null}
                 </View>
@@ -867,6 +870,8 @@ interface RowEditorProps {
     slotIndex: number,
     currentValue: string,
   ) => void;
+  copiedBar: ParsedBar | null;
+  onCopyBar: (bar: ParsedBar | null) => void;
 }
 
 function RowEditor({
@@ -885,9 +890,10 @@ function RowEditor({
   onChartChange,
   onCellChange,
   onCellKeyPress,
+  copiedBar,
+  onCopyBar,
 }: RowEditorProps) {
   const { width } = useWindowDimensions();
-  const [copiedBar, setCopiedBar] = useState<ParsedBar | null>(null);
   const isCompactViewport = width < 900;
   const isSmallViewport = width < 640;
   const useMobileCellEditor = width < 760;
@@ -1315,7 +1321,7 @@ function RowEditor({
         />
         <PrimaryButton
           label={useMobileCellEditor ? 'Copy' : '⎘ Copy'}
-          onPress={() => setCopiedBar(cloneBar(selectedBar))}
+          onPress={() => onCopyBar(cloneBar(selectedBar))}
           variant="ghost"
           size="compact"
           style={[
@@ -1325,12 +1331,15 @@ function RowEditor({
         />
         <PrimaryButton
           label={useMobileCellEditor ? 'Paste' : '⎘ Paste'}
-          onPress={() =>
-            copiedBar
-              ? replaceBar(selectedGlobalBarIndex, copiedBar)
-              : undefined
-          }
+          onPress={() => {
+            if (!copiedBar) {
+              return;
+            }
+
+            replaceBar(selectedGlobalBarIndex, copiedBar);
+          }}
           variant="ghost"
+          disabled={!copiedBar}
           style={[
             styles.barFooterButton,
             useMobileCellEditor ? styles.barFooterButtonMobile : { width: actionButtonWidth },
@@ -2141,6 +2150,9 @@ function BarInlineNoteField({
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
           style={[styles.input, styles.compactInput, styles.barInlineNoteInput]}
           placeholder="e.g. Gm7"
           placeholderTextColor={palette.textMuted}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { flattenSongRowsToChart } from '../utils/songChart';
 import { parseTab } from '../utils/tabLayout';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PerformanceView'>;
+type PerformanceTone = 'light' | 'dark';
 
 export function LiveViewScreen({ route }: Props) {
   const { songId } = route.params;
@@ -19,6 +20,8 @@ export function LiveViewScreen({ route }: Props) {
   const { showUpgradePrompt } = useUpgradePrompt();
   const { songs } = useBassTab();
   const [renderMode, setRenderMode] = useState<TabPreviewRenderMode>('ascii');
+  const [tone, setTone] = useState<PerformanceTone>('dark');
+  const hasAutoSelectedSvgModeRef = useRef(false);
   const { width } = useWindowDimensions();
   const isPhone = width < 760;
   const isTablet = width >= 760 && width < 1100;
@@ -48,14 +51,27 @@ export function LiveViewScreen({ route }: Props) {
         bars={bars}
         rowAnnotations={chart.rowAnnotations ?? []}
         rowBarCounts={chart.rowBarCounts}
-        tone="dark"
+        tone={tone}
         compact={useCompactPreview}
         renderMode={renderMode}
         svgScaleProfile="performance"
         svgViewportWidth={svgViewportWidth}
       />
     );
-  }, [chart, renderMode, svgViewportWidth, useCompactPreview]);
+  }, [chart, renderMode, svgViewportWidth, tone, useCompactPreview]);
+
+  useEffect(() => {
+    if (hasAutoSelectedSvgModeRef.current) {
+      return;
+    }
+
+    if (!capabilities.svgEnabled) {
+      return;
+    }
+
+    hasAutoSelectedSvgModeRef.current = true;
+    setRenderMode('svg');
+  }, [capabilities.svgEnabled]);
 
   const handleRenderModeChange = (mode: TabPreviewRenderMode) => {
     if (mode === 'svg' && !capabilities.svgEnabled) {
@@ -64,6 +80,9 @@ export function LiveViewScreen({ route }: Props) {
     }
 
     setRenderMode(mode);
+  };
+  const handleToneChange = (nextTone: PerformanceTone) => {
+    setTone(nextTone);
   };
 
   if (!song || !chart) {
@@ -86,26 +105,50 @@ export function LiveViewScreen({ route }: Props) {
           <Text style={[styles.songTitle, isPhone && styles.songTitleNarrow]} numberOfLines={1}>
             {song.title}
           </Text>
-          <View style={styles.renderModeSelector}>
-            {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
-              <Pressable
-                key={mode}
-                onPress={() => handleRenderModeChange(mode)}
-                style={[
-                  styles.renderModeOption,
-                  renderMode === mode && styles.renderModeOptionActive,
-                ]}
-              >
-                <Text
+          <View style={styles.titleControls}>
+            <View style={styles.renderModeSelector}>
+              {(['ascii', 'svg'] as TabPreviewRenderMode[]).map((mode) => (
+                <Pressable
+                  key={mode}
+                  onPress={() => handleRenderModeChange(mode)}
                   style={[
-                    styles.renderModeOptionText,
-                    renderMode === mode && styles.renderModeOptionTextActive,
+                    styles.renderModeOption,
+                    renderMode === mode && styles.renderModeOptionActive,
                   ]}
                 >
-                  {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.renderModeOptionText,
+                      renderMode === mode && styles.renderModeOptionTextActive,
+                    ]}
+                  >
+                    {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.renderModeSelector}>
+              {(['light', 'dark'] as PerformanceTone[]).map((value) => (
+                <Pressable
+                  key={value}
+                  onPress={() => handleToneChange(value)}
+                  style={[
+                    styles.renderModeOption,
+                    styles.toneModeOption,
+                    tone === value && styles.renderModeOptionActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.renderModeOptionText,
+                      tone === value && styles.renderModeOptionTextActive,
+                    ]}
+                  >
+                    {isPhone ? (value === 'light' ? 'LT' : 'DK') : value.toUpperCase()}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </View>
         <Text style={[styles.subtitle, isPhone && styles.subtitleNarrow]}>
@@ -132,6 +175,7 @@ export function LiveViewScreen({ route }: Props) {
               style={[
                 styles.pageCanvas,
                 isPhone && styles.pageCanvasNarrow,
+                tone === 'light' ? styles.pageCanvasLight : styles.pageCanvasDark,
                 { width: canvasWidth, maxWidth: canvasWidth },
               ]}
             >
@@ -171,6 +215,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: palette.liveText,
     flex: 1,
+    minWidth: 0,
   },
   songTitleNarrow: {
     fontSize: 24,
@@ -206,11 +251,17 @@ const styles = StyleSheet.create({
   },
   renderModeSelector: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
+    flexShrink: 0,
+  },
+  titleControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     flexShrink: 0,
   },
   renderModeOption: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
@@ -229,13 +280,23 @@ const styles = StyleSheet.create({
   renderModeOptionTextActive: {
     color: '#dbeafe',
   },
+  toneModeOption: {
+    minWidth: 34,
+    alignItems: 'center',
+  },
   pageCanvas: {
     borderRadius: 24,
     paddingHorizontal: 24,
     paddingVertical: 28,
-    backgroundColor: '#0b1120',
     borderWidth: 1,
+  },
+  pageCanvasDark: {
+    backgroundColor: '#0b1120',
     borderColor: '#1f2937',
+  },
+  pageCanvasLight: {
+    backgroundColor: '#ffffff',
+    borderColor: '#cbd5e1',
   },
   pageCanvasNarrow: {
     borderRadius: 20,

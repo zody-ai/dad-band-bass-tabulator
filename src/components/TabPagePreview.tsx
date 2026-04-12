@@ -78,8 +78,7 @@ const renderAsciiBarNotes = (rowBars: ParsedBar[], barNotes: string[], prefixCha
     rowBars.map((bar, index) => {
       const slots = getBarSlotCount(bar);
       const barTextWidth = slots * 2;
-      const noteTextWidth = Math.max(0, barTextWidth - 1);
-      return `| ${(barNotes[index] ?? '').slice(0, noteTextWidth).padEnd(noteTextWidth, ' ')}`;
+      return `|${(barNotes[index] ?? '').slice(0, barTextWidth).padEnd(barTextWidth, ' ')}|`;
     }),
   );
 
@@ -830,7 +829,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   barNoteCell: {
+    fontFamily: monoFontFamily,
     textAlign: 'left',
+    ...monoWeb,
   },
   annotationText: {
     fontFamily: monoFontFamily,
