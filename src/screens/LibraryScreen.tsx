@@ -305,13 +305,36 @@ export function LibraryScreen({ navigation }: Props) {
     };
     setSongPendingDelete(null);
 
+    const isOrphanDelete =
+      tier === 'PRO' &&
+      Boolean(backendApi) &&
+      Boolean(pendingDelete.publishedSongId) &&
+      pendingDelete.communityAction === 'ORPHAN_THEN_DELETE';
     const isPolicyDelete =
       tier === 'PRO' &&
       Boolean(backendApi) &&
       Boolean(pendingDelete.publishedSongId) &&
-      pendingDelete.communityAction !== 'LOCAL_ONLY';
+      pendingDelete.communityAction === 'REMOVE_FROM_COMMUNITY_THEN_DELETE';
 
-    if (isPolicyDelete && backendApi) {
+    if (isOrphanDelete && backendApi && pendingDelete.publishedSongId) {
+      try {
+        await backendApi.disownCommunitySong(pendingDelete.publishedSongId);
+        await backendApi.deleteSong(pendingDelete.backendSongId ?? pendingDelete.id);
+      } catch (error) {
+        const trigger = resolveUpgradeTrigger(error);
+
+        if (trigger) {
+          showUpgradePrompt(trigger);
+          return;
+        }
+
+        const message = error instanceof Error
+          ? error.message
+          : 'Could not orphan in Community and delete from library.';
+        setStatusMessage(message);
+        return;
+      }
+    } else if (isPolicyDelete && backendApi) {
       try {
         await backendApi.deleteSongWithPolicy(
           pendingDelete.backendSongId ?? pendingDelete.id,
@@ -349,7 +372,7 @@ export function LibraryScreen({ navigation }: Props) {
     deleteSong(
       pendingDelete.id,
       pendingDelete.backendSongId ?? pendingDelete.id,
-      { skipBackendDelete: isPolicyDelete },
+      { skipBackendDelete: isPolicyDelete || isOrphanDelete },
     );
     void refreshPublishedLookup().catch((error) => {
       console.warn('Failed to refresh published lookup after delete', error);
