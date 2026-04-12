@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Circle, Svg, Text as SvgText } from 'react-native-svg';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AppSectionNav } from '../components/AppSectionNav';
@@ -86,6 +87,14 @@ export function AccountScreen({ navigation }: Props) {
   const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
 
   const canResend = !nextResendAt || Date.now() >= nextResendAt.getTime();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh().catch((error) => {
+        console.warn('Subscription refresh failed on account focus', error);
+      });
+    }, [refresh]),
+  );
 
   const handleStartEmailChange = async () => {
     if (!canRequestEmailChange || emailChangeLoading) return;

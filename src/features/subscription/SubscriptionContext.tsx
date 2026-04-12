@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Linking } from 'react-native';
+import { AppState, AppStateStatus, Linking } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
 
 import { useAuth } from '../auth/state/useAuth';
@@ -124,6 +124,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   const [finalizingError, setFinalizingError] = useState<string | null>(null);
   const pricingFingerprintRef = useRef(serializePricing(defaultPricing));
   const finalizeCancelRef = useRef<() => void>(() => {});
+  const lastForegroundRefreshAtRef = useRef(0);
 
   const updatePricingIfChanged = useCallback((nextPricing: SubscriptionPricing) => {
     const fingerprint = serializePricing(nextPricing);
@@ -198,6 +199,33 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       console.warn('Subscription refresh failed after auth change', error);
     });
   }, [authState.type, cancelFinalizingPoll, refresh]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const minRefreshIntervalMs = 30_000;
+    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState !== 'active') {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastForegroundRefreshAtRef.current < minRefreshIntervalMs) {
+        return;
+      }
+
+      lastForegroundRefreshAtRef.current = now;
+      void refresh().catch((error) => {
+        console.warn('Subscription refresh failed after app foreground', error);
+      });
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated, refresh]);
 
   useEffect(() => {
     void subscriptionService

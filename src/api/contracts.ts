@@ -399,6 +399,16 @@ const coerceNullableString = (value: unknown, fallback: string | null): string |
   return value === null ? null : fallback;
 };
 
+const coerceAliasedValue = (record: Record<string, unknown>, aliases: string[]): unknown => {
+  for (const alias of aliases) {
+    if (alias in record) {
+      return record[alias];
+    }
+  }
+
+  return undefined;
+};
+
 const normalizeSubscriptionPlan = (
   plan: unknown,
   tier: SubscriptionTierDto,
@@ -430,31 +440,43 @@ const toSubscriptionCapabilitiesDto = (value: unknown): SubscriptionCapabilities
     return defaultSubscriptionCapabilitiesDto;
   }
 
+  const maxSongs = coerceAliasedValue(value, ['maxSongs', 'max_songs']);
+  const maxSetlists = coerceAliasedValue(value, ['maxSetlists', 'max_setlists']);
+  const maxCommunitySongs = coerceAliasedValue(value, ['maxCommunitySongs', 'max_community_songs']);
+  const maxCommunitySaves = coerceAliasedValue(value, ['maxCommunitySaves', 'max_community_saves']);
+  const maxStringCount = coerceAliasedValue(value, ['maxStringCount', 'max_string_count']);
+  const svgEnabled = coerceAliasedValue(value, ['svgEnabled', 'svg_enabled']);
+  const maxAiGenerations = coerceAliasedValue(value, ['maxAiGenerations', 'max_ai_generations']);
+  const maxDailyAiGenerations = coerceAliasedValue(value, [
+    'maxDailyAiGenerations',
+    'max_daily_ai_generations',
+  ]);
+
   return {
-    maxSongs: coerceNullableNumber(value.maxSongs, defaultSubscriptionCapabilitiesDto.maxSongs),
-    maxSetlists: coerceNullableNumber(value.maxSetlists, defaultSubscriptionCapabilitiesDto.maxSetlists),
+    maxSongs: coerceNullableNumber(maxSongs, defaultSubscriptionCapabilitiesDto.maxSongs),
+    maxSetlists: coerceNullableNumber(maxSetlists, defaultSubscriptionCapabilitiesDto.maxSetlists),
     maxCommunitySongs: coerceNullableNumber(
-      value.maxCommunitySongs,
+      maxCommunitySongs,
       defaultSubscriptionCapabilitiesDto.maxCommunitySongs,
     ),
     maxCommunitySaves: coerceNullableNumber(
-      value.maxCommunitySaves,
+      maxCommunitySaves,
       defaultSubscriptionCapabilitiesDto.maxCommunitySaves,
     ),
     maxStringCount: coerceNullableNumber(
-      value.maxStringCount,
+      maxStringCount,
       defaultSubscriptionCapabilitiesDto.maxStringCount,
     ),
     svgEnabled:
-      typeof value.svgEnabled === 'boolean'
-        ? value.svgEnabled
+      typeof svgEnabled === 'boolean'
+        ? svgEnabled
         : defaultSubscriptionCapabilitiesDto.svgEnabled,
     maxAiGenerations: coerceNullableNumber(
-      value.maxAiGenerations,
+      maxAiGenerations,
       defaultSubscriptionCapabilitiesDto.maxAiGenerations ?? null,
     ),
     maxDailyAiGenerations: coerceNullableNumber(
-      value.maxDailyAiGenerations,
+      maxDailyAiGenerations,
       defaultSubscriptionCapabilitiesDto.maxDailyAiGenerations ?? null,
     ),
   };
@@ -465,26 +487,39 @@ const toSubscriptionSnapshotDto = (value: unknown): SubscriptionSnapshotDto | nu
     return null;
   }
 
-  const tier = normalizeSubscriptionTier(value.tier, value.plan);
-  const status = normalizeSubscriptionStatus(value.status) ?? 'free';
-  const plan = normalizeSubscriptionPlan(value.plan, tier);
+  const tierRaw = coerceAliasedValue(value, ['tier', 'subscriptionTier', 'subscription_tier']);
+  const statusRaw = coerceAliasedValue(value, ['status', 'subscriptionStatus', 'subscription_status']);
+  const planRaw = coerceAliasedValue(value, ['plan', 'subscriptionPlan', 'subscription_plan']);
+  const planCodeRaw = coerceAliasedValue(value, ['planCode', 'plan_code']);
+  const currencyRaw = coerceAliasedValue(value, ['currency']);
+  const unitAmountMinorRaw = coerceAliasedValue(value, ['unitAmountMinor', 'unit_amount_minor']);
+  const currentPeriodStartRaw = coerceAliasedValue(value, ['currentPeriodStart', 'current_period_start']);
+  const currentPeriodEndRaw = coerceAliasedValue(value, ['currentPeriodEnd', 'current_period_end']);
+  const trialEndRaw = coerceAliasedValue(value, ['trialEnd', 'trial_end']);
+  const cancelAtPeriodEndRaw = coerceAliasedValue(value, ['cancelAtPeriodEnd', 'cancel_at_period_end']);
+  const capabilitiesRaw = coerceAliasedValue(value, ['capabilities', 'subscriptionCapabilities', 'subscription_capabilities']);
+  const communitySongsSavedRaw = coerceAliasedValue(value, ['communitySongsSaved', 'community_songs_saved']);
+
+  const tier = normalizeSubscriptionTier(tierRaw, planRaw);
+  const status = normalizeSubscriptionStatus(statusRaw) ?? 'free';
+  const plan = normalizeSubscriptionPlan(planRaw, tier);
   const communitySongsSaved =
-    typeof value.communitySongsSaved === 'number' && Number.isFinite(value.communitySongsSaved)
-      ? Math.max(0, Math.floor(value.communitySongsSaved))
+    typeof communitySongsSavedRaw === 'number' && Number.isFinite(communitySongsSavedRaw)
+      ? Math.max(0, Math.floor(communitySongsSavedRaw))
       : 0;
 
   return {
     tier,
     status,
     plan,
-    planCode: coerceNullableString(value.planCode, null),
-    currency: isNullableCurrency(value.currency) ? value.currency : null,
-    unitAmountMinor: coerceNullableNumber(value.unitAmountMinor, null),
-    currentPeriodStart: coerceNullableString(value.currentPeriodStart, null),
-    currentPeriodEnd: coerceNullableString(value.currentPeriodEnd, null),
-    trialEnd: coerceNullableString(value.trialEnd, null),
-    cancelAtPeriodEnd: typeof value.cancelAtPeriodEnd === 'boolean' ? value.cancelAtPeriodEnd : false,
-    capabilities: toSubscriptionCapabilitiesDto(value.capabilities),
+    planCode: coerceNullableString(planCodeRaw, null),
+    currency: isNullableCurrency(currencyRaw) ? currencyRaw : null,
+    unitAmountMinor: coerceNullableNumber(unitAmountMinorRaw, null),
+    currentPeriodStart: coerceNullableString(currentPeriodStartRaw, null),
+    currentPeriodEnd: coerceNullableString(currentPeriodEndRaw, null),
+    trialEnd: coerceNullableString(trialEndRaw, null),
+    cancelAtPeriodEnd: typeof cancelAtPeriodEndRaw === 'boolean' ? cancelAtPeriodEndRaw : false,
+    capabilities: toSubscriptionCapabilitiesDto(capabilitiesRaw),
     communitySongsSaved,
   };
 };
