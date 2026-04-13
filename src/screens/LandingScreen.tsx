@@ -1,15 +1,18 @@
+import { useMemo } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Circle, Line, Svg, Text as SvgText } from 'react-native-svg';
 
 import { BassBackdrop } from '../components/BassBackdrop';
 import { DadBandBrandBanner } from '../components/DadBandBrandBanner';
+import { TabPagePreview } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
 import { brandDisplayFontFamily } from '../constants/typography';
+import { SUGGESTED_BANDS, SUGGESTED_TITLES } from '../data/songSuggestions';
 import { useAuth } from '../features/auth/state/useAuth';
 import { useSubscription } from '../features/subscription/SubscriptionContext';
 import { RootStackParamList } from '../navigation/types';
+import { parseTab } from '../utils/tabLayout';
 
 const FALLBACK_FREE = {
   maxSongs: 20,
@@ -17,6 +20,41 @@ const FALLBACK_FREE = {
   maxAiGenerations: 15,
   maxDailyAiGenerations: 3,
 } as const;
+const landingTabSnippet = parseTab(
+  [
+    'G|----------------|----------------|',
+    'D|----------------|------5-7-5-----|',
+    'A|--5-----5-7-5---|--7---------5---|',
+    'E|------3---------|----------------|',
+  ].join('\n'),
+);
+const PREVIEW_KEYS = ['E', 'A', 'D', 'G', 'C#m', 'Bm', 'F#'] as const;
+const PREVIEW_TUNINGS = ['Std E', 'Drop D', 'Half Step Down'] as const;
+const PREVIEW_UPDATED = ['Updated 1d ago', 'Updated 2d ago', 'Updated 4d ago', 'Updated 1w ago'] as const;
+
+type PreviewSong = {
+  title: string;
+  artist: string;
+  key: string;
+  tuning: string;
+  updated: string;
+};
+
+const pickRandom = <T,>(items: readonly T[]): T =>
+  items[Math.floor(Math.random() * items.length)] ?? items[0];
+
+const buildPreviewSongs = (count: number): PreviewSong[] => {
+  const shuffledTitles = [...SUGGESTED_TITLES].sort(() => Math.random() - 0.5);
+  const shuffledBands = [...SUGGESTED_BANDS].sort(() => Math.random() - 0.5);
+
+  return Array.from({ length: count }, (_, index) => ({
+    title: shuffledTitles[index % shuffledTitles.length] ?? 'Untitled Groove',
+    artist: shuffledBands[index % shuffledBands.length] ?? 'The Bell Ends',
+    key: pickRandom(PREVIEW_KEYS),
+    tuning: pickRandom(PREVIEW_TUNINGS),
+    updated: pickRandom(PREVIEW_UPDATED),
+  }));
+};
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Landing'>;
 const bassHeroImage = require('../../assets/bass.png');
@@ -51,6 +89,9 @@ export function LandingScreen({ navigation }: Props) {
   const maxAiGenerations = freeCaps?.maxAiGenerations ?? FALLBACK_FREE.maxAiGenerations;
   const maxDailyAiGenerations = freeCaps?.maxDailyAiGenerations ?? FALLBACK_FREE.maxDailyAiGenerations;
   const isAuthenticated = authState.type === 'AUTHENTICATED';
+  const previewSongs = useMemo(() => buildPreviewSongs(5), []);
+  const libraryPreviewSongs = previewSongs.slice(0, 2);
+  const plannedPreviewSongs = previewSongs.slice(2, 5);
 
   const openApp = () => {
     if (isAuthenticated) {
@@ -245,76 +286,61 @@ export function LandingScreen({ navigation }: Props) {
             <Text style={styles.previewCopy}>This is the kind of workspace you get after sign-up.</Text>
             <View style={[styles.previewGrid, { gap: gridGap }, isMobile && styles.previewGridNarrow]}>
               <View style={styles.previewCard}>
-                <Text style={styles.previewCardTitle}>Library</Text>
-                <Text style={styles.previewLine}>• Hysteria (Rehearsal Cut)</Text>
-                <Text style={styles.previewLine}>• Longview (Dropped intro fixed)</Text>
-                <Text style={styles.previewLine}>• Valerie (Wedding set version)</Text>
+                <View style={styles.previewPaneHeader}>
+                  <Text style={styles.previewCardTitle}>Library</Text>
+                  <Text style={styles.previewPaneChip}>23 songs</Text>
+                </View>
+                <View style={styles.previewStack}>
+                  {libraryPreviewSongs.map((song) => (
+                    <View key={`library-preview-${song.title}`} style={styles.previewLibraryEntry}>
+                      <View style={styles.previewLibraryTitleRow}>
+                        <Text style={styles.previewLibraryTitle}>{song.title}</Text>
+                        <View style={styles.previewKeyBadge}>
+                          <Text style={styles.previewKeyBadgeText}>{song.key}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.previewLibraryArtist}>{song.artist}</Text>
+                      <Text style={styles.previewLibraryMeta}>{song.tuning} • {song.updated}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
               <View style={[styles.previewCard, styles.previewCardTilt]}>
-                <Text style={styles.previewCardTitle}>Setlist: Friday Pub</Text>
-                <Text style={styles.previewLine}>1. Superstition</Text>
-                <Text style={styles.previewLine}>2. Mr. Brightside</Text>
-                <Text style={styles.previewLine}>3. Use Somebody</Text>
+                <Text style={styles.previewCardTitle}>Planned (subject to chaos)</Text>
+                <View style={styles.previewStack}>
+                  {plannedPreviewSongs.map((song, index) => (
+                    <View key={`planned-preview-${song.title}`} style={styles.previewSetlistEntry}>
+                      <View style={styles.previewOrderBadge}>
+                        <Text style={styles.previewOrderBadgeText}>{index + 1}</Text>
+                      </View>
+                      <View style={styles.previewSetlistCopy}>
+                        <Text style={styles.previewSetlistTitle}>{song.title}</Text>
+                        <Text style={styles.previewSetlistMeta}>{song.artist} • {song.key}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
               </View>
               <View style={[styles.previewCard, styles.previewCardTab]}>
                 <Text style={[styles.previewCardTitle, styles.previewCardTitleLight]}>Tab Snippet</Text>
                 <View style={styles.previewSnippetPanel}>
-                  {/* Rhythm example mirrors in-app SVG rules:
-                      hold2 = circle + vertical tail, beat = vertical stem,
-                      short = vertical stem + horizontal flag. */}
-                  <Svg viewBox="0 0 300 140" width="100%" height={136}>
-                    {/* String lines */}
-                    <Line x1="28" y1="40"  x2="276" y2="40"  stroke="#475569" strokeWidth="1.5" />
-                    <Line x1="28" y1="64"  x2="276" y2="64"  stroke="#475569" strokeWidth="1.5" />
-                    <Line x1="28" y1="88"  x2="276" y2="88"  stroke="#475569" strokeWidth="1.5" />
-                    <Line x1="28" y1="112" x2="276" y2="112" stroke="#475569" strokeWidth="1.5" />
-                    {/* String labels */}
-                    <SvgText x="10" y="44"  fill="#94a3b8" fontSize="11" fontWeight="700">G</SvgText>
-                    <SvgText x="10" y="68"  fill="#94a3b8" fontSize="11" fontWeight="700">D</SvgText>
-                    <SvgText x="10" y="92"  fill="#94a3b8" fontSize="11" fontWeight="700">A</SvgText>
-                    <SvgText x="10" y="116" fill="#94a3b8" fontSize="11" fontWeight="700">E</SvgText>
-                    {/* Bar lines */}
-                    <Line x1="28"  y1="40" x2="28"  y2="112" stroke="#475569" strokeWidth="2" />
-                    <Line x1="152" y1="40" x2="152" y2="112" stroke="#475569" strokeWidth="1.5" />
-                    <Line x1="276" y1="40" x2="276" y2="112" stroke="#475569" strokeWidth="2" />
-
-                    {/* 1) Two-beat note (hold2): circle + vertical tail */}
-                    <Line x1="52" y1="98" x2="52" y2="78" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <Circle cx="52" cy="107" r="9" stroke="#38bdf8" strokeWidth="1.5" fill="none" />
-                    <SvgText x="52" y="116" fill="#38bdf8" fontSize="10" fontWeight="900" textAnchor="middle">5</SvgText>
-
-                    {/* 2) One-beat note (beat): vertical stem only */}
-                    <Line x1="96" y1="78" x2="96" y2="58" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <SvgText x="94" y="92" fill="#38bdf8" fontSize="10" fontWeight="900" textAnchor="middle">5</SvgText>
-
-                    {/* 3) + 4) Two half-beat notes (short): stem + horizontal flag */}
-                    <Line x1="120" y1="78" x2="120" y2="58" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <Line x1="120" y1="58" x2="130" y2="58" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <SvgText x="118" y="92" fill="#38bdf8" fontSize="10" fontWeight="900" textAnchor="middle">7</SvgText>
-
-                    <Line x1="142" y1="78" x2="142" y2="58" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <Line x1="142" y1="58" x2="152" y2="58" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <SvgText x="140" y="92" fill="#38bdf8" fontSize="10" fontWeight="900" textAnchor="middle">5</SvgText>
-
-                    {/* Bar 2: similar rhythm, different positions */}
-                    {/* 1) Two-beat note (hold2): circle + vertical tail */}
-                    <Line x1="176" y1="50" x2="176" y2="30" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <Circle cx="176" cy="59" r="9" stroke="#38bdf8" strokeWidth="1.5" fill="none" />
-                    <SvgText x="176" y="68" fill="#38bdf8" fontSize="10" fontWeight="900" textAnchor="middle">7</SvgText>
-
-                    {/* 2) One-beat note (beat): vertical stem only */}
-                    <Line x1="220" y1="102" x2="220" y2="82" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <SvgText x="218" y="116" fill="#38bdf8" fontSize="10" fontWeight="900" textAnchor="middle">3</SvgText>
-
-                    {/* 3) + 4) Two half-beat notes (short): stem + horizontal flag */}
-                    <Line x1="244" y1="78" x2="244" y2="58" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <Line x1="244" y1="58" x2="254" y2="58" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <SvgText x="242" y="92" fill="#38bdf8" fontSize="10" fontWeight="900" textAnchor="middle">5</SvgText>
-
-                    <Line x1="266" y1="54" x2="266" y2="34" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <Line x1="266" y1="34" x2="276" y2="34" stroke="#38bdf8" strokeWidth="1.4" strokeLinecap="round" />
-                    <SvgText x="264" y="68" fill="#38bdf8" fontSize="10" fontWeight="900" textAnchor="middle">5</SvgText>
-                  </Svg>
+                  <TabPagePreview
+                    renderMode="svg"
+                    tone="dark"
+                    compact
+                    svgScaleProfile="performance"
+                    barsPerRow={2}
+                    stringNames={landingTabSnippet.stringNames}
+                    bars={landingTabSnippet.bars}
+                    rowAnnotations={[
+                      {
+                        label: 'Verse groove',
+                        beforeText: 'Keep it tight with kick',
+                        afterText: '',
+                        barNotes: [],
+                      },
+                    ]}
+                  />
                 </View>
               </View>
             </View>
@@ -769,6 +795,24 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 2,
   },
+  previewPaneHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  previewPaneChip: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '700',
+    color: '#475569',
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
   previewCardTilt: {
     transform: [{ rotate: '-2deg' }],
   },
@@ -793,10 +837,93 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 2,
   },
-  previewLine: {
-    fontSize: 13,
+  previewStack: {
+    gap: 8,
+  },
+  previewLibraryEntry: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#dbe5f0',
+    borderWidth: 1,
+    borderRadius: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 3,
+  },
+  previewLibraryTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  previewLibraryTitle: {
+    flex: 1,
+    fontSize: 14,
     lineHeight: 18,
-    color: '#4b5563',
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  previewKeyBadge: {
+    minWidth: 26,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+  },
+  previewKeyBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1d4ed8',
+  },
+  previewLibraryArtist: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#334155',
+    fontWeight: '600',
+  },
+  previewLibraryMeta: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#64748b',
+  },
+  previewSetlistEntry: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 11,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  previewOrderBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  previewOrderBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1d4ed8',
+  },
+  previewSetlistCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  previewSetlistTitle: {
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  previewSetlistMeta: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#64748b',
   },
   previewSnippetPanel: {
     marginTop: 4,

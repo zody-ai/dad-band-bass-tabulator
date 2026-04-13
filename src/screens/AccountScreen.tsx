@@ -498,6 +498,9 @@ export function AccountScreen({ navigation }: Props) {
             <Text style={styles.planText}>
               All features unlocked. What you do with it is up to you.
             </Text>
+            <Text style={styles.planText}>
+              Problems, improvements, as a pro user email us at support@dad-band-bass.com
+            </Text>
 
             <View style={styles.divider} />
 

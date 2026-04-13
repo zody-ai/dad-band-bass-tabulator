@@ -11,6 +11,7 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import { TabPagePreview } from '../components/TabPagePreview';
 import { palette } from '../constants/colors';
 import { brandDisplayFontFamily } from '../constants/typography';
+import { SUGGESTED_BANDS, SUGGESTED_TITLES } from '../data/songSuggestions';
 import { resolveUpgradeTrigger, useSubscription, useUpgradePrompt } from '../features/subscription';
 import { BassTabApiError } from '../api';
 import { RootStackParamList, TabParamList } from '../navigation/types';
@@ -36,47 +37,6 @@ const LOADING_QUIPS = [
   'Digging through the chord book…',
   'Capo on the wrong fret again…',
   'Blaming it on the amp settings…',
-];
-
-// Update this list any time you want new random artist suggestions in AI Create.
-const SUGGESTED_BANDS = [
-  'Mouse Rat',
-  'The Butthole Surfers',
-  'Psychedelic Porn Crumpets',
-  'King Gizzard & the Lizard Wizard',
-  'Judge Dread',
-  'Toad the Wet Sprocket',
-  'Titwank',
-  'Dr. Teeth and the Electric Mayhem',
-  'Half Man Half Biscuit',
-  'The Knob Jockies',
-  'Wet Blanket',
-  'Love Fist',
-  'The Bell Ends'
-];
-
-// Update this list any time you want new random song title suggestions in AI Create.
-const SUGGESTED_TITLES = [
-  'I Left the Oven On Again',
-  "This Isn't the Right Key",
-  'Mum Says Turn It Down',
-  'Sorry About the Noise',
-  'The Bass Is Probably Fine',
-  'We Forgot the Ending',
-  "That Wasn't Me Playing",
-  "It Gets Better (It Doesn't)",
-  'One More Take (Definitely the Last)',
-  'I Thought This Was Practice',
-  'The Chorus Never Arrived',
-  'Please Clap at the End',
-  "We'll Fix It Later",
-  'This Bit Goes On Too Long',
-  'I Blame the Drummer',
-  'That Note Was Intentional',
-  'Nearly Had It That Time',
-  'The Amp Is Definitely On',
-  'We Start Again Here',
-  "Don't Tell Anyone About This",
 ];
 
 const GHOST_STRING_NAMES = ['G', 'D', 'A', 'E'];
