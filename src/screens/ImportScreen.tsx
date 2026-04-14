@@ -743,11 +743,6 @@ export function ImportScreen({ navigation }: Props) {
   };
 
   const handlePreviewRenderModeChange = (mode: TabPreviewRenderMode) => {
-    if (mode === 'svg' && !capabilities.svgEnabled) {
-      showUpgradePrompt('SVG_MODE');
-      return;
-    }
-
     setPreviewRenderMode(mode);
   };
 
@@ -893,6 +888,8 @@ export function ImportScreen({ navigation }: Props) {
               onPreview={() => {
                 void handleOpenPreview(song);
               }}
+              previewLabel={isPreviewLoading ? 'Loading...' : 'Preview Tab'}
+              previewDisabled={isPreviewLoading || isSaving}
               onUpVote={() => {
                 void handleVote(song.id, 'UP');
               }}
@@ -1006,7 +1003,7 @@ export function ImportScreen({ navigation }: Props) {
                           previewRenderMode === mode && styles.previewRenderModeOptionTextActive,
                         ]}
                       >
-                        {mode === 'svg' && !capabilities.svgEnabled ? 'SVG PRO' : mode.toUpperCase()}
+                        {mode.toUpperCase()}
                       </Text>
                     </Pressable>
                   ))}
@@ -1035,9 +1032,19 @@ export function ImportScreen({ navigation }: Props) {
                     compact
                   />
                   {tier !== 'PRO' && isTruncated ? (
-                    <Text style={styles.previewUpsellNote}>
-                      Showing first 2 rows only. Go Pro for full chart preview.
-                    </Text>
+                    <>
+                      <Text style={styles.previewUpsellNote}>
+                        Showing first 2 rows only.
+                      </Text>
+                      <Pressable
+                        onPress={() => navigation.navigate('Upgrade')}
+                        style={styles.previewUpsellLinkWrap}
+                      >
+                        <Text style={styles.previewUpsellLink}>
+                          Go Pro for full chart preview.
+                        </Text>
+                      </Pressable>
+                    </>
                   ) : null}
                 </ScrollView>
 
@@ -1318,6 +1325,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: palette.textMuted,
     fontWeight: '700',
+  },
+  previewUpsellLinkWrap: {
+    marginTop: 2,
+    alignSelf: 'flex-start',
+  },
+  previewUpsellLink: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '800',
+    color: palette.accent,
+    textDecorationLine: 'underline',
   },
   modalBackdrop: {
     flex: 1,

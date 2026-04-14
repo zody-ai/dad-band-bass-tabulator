@@ -19,6 +19,8 @@ export type SongListItemProps = {
   voteScore: number;
   userVote: 'UP' | 'DOWN' | null;
   onPreview?: () => void;
+  previewLabel?: string;
+  previewDisabled?: boolean;
   onUpVote?: () => void;
   onDownVote?: () => void;
   voteDisabled?: boolean;
@@ -48,6 +50,8 @@ export function SongListItem({
   voteScore,
   userVote,
   onPreview,
+  previewLabel = 'Preview',
+  previewDisabled = false,
   onUpVote,
   onDownVote,
   voteDisabled = false,
@@ -178,6 +182,21 @@ export function SongListItem({
       </View>
 
       <View style={styles.actionsColumn}>
+        {onPreview ? (
+          <Pressable
+            onPress={(event) => handleActionPress(event, onPreview)}
+            disabled={previewDisabled}
+            style={({ pressed }) => [
+              styles.previewButton,
+              previewDisabled && styles.actionDisabled,
+              pressed && !previewDisabled && styles.actionPressed,
+            ]}
+          >
+            <Text style={[styles.previewButtonText, previewDisabled && styles.actionTextDisabled]}>
+              {previewLabel}
+            </Text>
+          </Pressable>
+        ) : null}
         {actionLabel ? (
           <Pressable
             onPress={onAction ? (event) => handleActionPress(event, onAction) : undefined}
@@ -425,6 +444,21 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
     backgroundColor: palette.primary,
+  },
+  previewButton: {
+    minWidth: 108,
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  previewButtonText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#f8fafc',
   },
   actionDisabled: {
     backgroundColor: palette.primaryMuted,
