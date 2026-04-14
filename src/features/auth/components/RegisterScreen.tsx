@@ -11,7 +11,7 @@ import { avatarPresetValue, avatarPresets, findAvatarPreset } from '../utils/ava
 import { isValidEmail } from '../utils/email';
 import { authScreenStyles as styles } from './authScreenStyles';
 
-const handlePattern = /^[a-z0-9_-]{3,30}$/;
+const handlePattern = /^[A-Za-z0-9 _-]{3,30}$/;
 
 interface RegisterScreenProps {
   onRegistered: (maskedEmail: string) => void;
@@ -46,7 +46,7 @@ export function RegisterScreen({ onRegistered }: RegisterScreenProps) {
   const [focusedField, setFocusedField] = useState<null | 'email' | 'password' | 'handle' | 'avatarUrl'>(null);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const normalizedEmail = useMemo(() => email.trim().toLowerCase(), [email]);
-  const normalizedHandle = useMemo(() => handle.trim().toLowerCase(), [handle]);
+  const normalizedHandle = useMemo(() => handle.trim(), [handle]);
   const normalizedAvatarUrl = useMemo(() => avatarUrl.trim(), [avatarUrl]);
   const selectedPreset = useMemo(
     () => findAvatarPreset(normalizedAvatarUrl),
@@ -206,11 +206,11 @@ export function RegisterScreen({ onRegistered }: RegisterScreenProps) {
         <View style={styles.field}>
           <Text style={styles.label}>Display name</Text>
           <TextInput
-            autoCapitalize="none"
+            autoCapitalize="words"
             autoCorrect={false}
             textContentType="username"
             autoComplete="username"
-            placeholder="myhandle"
+            placeholder="My Bass Name"
             placeholderTextColor="#94a3b8"
             style={[
               styles.input,
@@ -219,7 +219,7 @@ export function RegisterScreen({ onRegistered }: RegisterScreenProps) {
             ]}
             value={handle}
             onChangeText={(value) => {
-              setHandle(value.toLowerCase());
+              setHandle(value);
               if (errorMessage) {
                 clearError();
               }
@@ -238,7 +238,7 @@ export function RegisterScreen({ onRegistered }: RegisterScreenProps) {
           />
           {showHandleError ? (
             <Text style={styles.inlineError}>
-              Use 3-30 characters: lowercase letters, numbers, `_`, or `-`.
+              Use 3-30 characters: letters, numbers, spaces, `_`, or `-`.
             </Text>
           ) : (
             <Text style={styles.hint}>Pick a display name for the community — you can change it later.</Text>

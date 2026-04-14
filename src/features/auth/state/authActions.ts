@@ -12,8 +12,8 @@ interface ActionDeps {
   getState: () => AuthStoreState;
 }
 
-const normalizeHandle = (value: string): string => value.trim().toLowerCase();
-const isValidHandle = (value: string): boolean => /^[a-z0-9_-]{3,30}$/.test(value);
+const normalizeHandle = (value: string): string => value.trim();
+const isValidHandle = (value: string): boolean => /^[A-Za-z0-9 _-]{3,30}$/.test(value);
 const isValidPassword = (value: string): boolean => value.length >= 8 && value.length <= 128;
 
 export const createAuthActions = ({ api, dispatch, getState }: ActionDeps) => {
@@ -194,7 +194,7 @@ export const createAuthActions = ({ api, dispatch, getState }: ActionDeps) => {
     }
 
     if (!isValidHandle(handle)) {
-      setError('Handle must be 3-30 characters using lowercase letters, numbers, underscores, or hyphens.');
+      setError('Display name must be 3-30 characters using letters, numbers, spaces, underscores, or hyphens.');
       return;
     }
 
