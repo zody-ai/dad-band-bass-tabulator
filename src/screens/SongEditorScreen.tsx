@@ -537,54 +537,59 @@ export function SongEditorScreen({ navigation, route }: Props) {
         />
       </View>
 
-      <ScrollView
-        style={styles.editorScroll}
-        contentContainerStyle={styles.editorScrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {isNewEmpty ? (
-          <>
-            <View style={styles.newSongStart}>
-              <Text style={styles.newSongStartText}>
-                Configure your strings, tuning, and beats per bar above, then start writing.
-              </Text>
-              <PrimaryButton
-                label="Start Writing"
-                onPress={handleStartEditing}
+      <View style={styles.editorRegion}>
+        <ScrollView
+          style={styles.editorScroll}
+          contentContainerStyle={styles.editorScrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          alwaysBounceVertical
+          showsVerticalScrollIndicator
+        >
+          {isNewEmpty ? (
+            <>
+              <View style={styles.newSongStart}>
+                <Text style={styles.newSongStartText}>
+                  Configure your strings, tuning, and beats per bar above, then start writing.
+                </Text>
+                <PrimaryButton
+                  label="Start Writing"
+                  onPress={handleStartEditing}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              {lockMetadata ? (
+                <Text style={styles.lockedMetaText}>
+                  Title, artist, key, and tuning are locked while you own this song in the community. Republish after editing to push changes, or release it to edit freely.
+                </Text>
+              ) : null}
+
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Tab Editor</Text>
+                <Text style={styles.sectionMeta}>
+                  Last updated {formatUpdatedAt(song.updatedAt)}
+                </Text>
+              </View>
+
+              <SectionEditorCard
+                key={chart.id}
+                section={chart}
+                index={0}
+                isFirst
+                isLast
+                showSectionControls={false}
+                saveSignal={saveSignal}
+                onChange={handleChartChange}
+                onMoveUp={() => {}}
+                onMoveDown={() => {}}
+                onDelete={() => {}}
               />
-            </View>
-          </>
-        ) : (
-          <>
-            {lockMetadata ? (
-              <Text style={styles.lockedMetaText}>
-                Title, artist, key, and tuning are locked while you own this song in the community. Republish after editing to push changes, or release it to edit freely.
-              </Text>
-            ) : null}
-
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Tab Editor</Text>
-              <Text style={styles.sectionMeta}>
-                Last updated {formatUpdatedAt(song.updatedAt)}
-              </Text>
-            </View>
-
-            <SectionEditorCard
-              key={chart.id}
-              section={chart}
-              index={0}
-              isFirst
-              isLast
-              showSectionControls={false}
-              saveSignal={saveSignal}
-              onChange={handleChartChange}
-              onMoveUp={() => {}}
-              onMoveDown={() => {}}
-              onDelete={() => {}}
-            />
-          </>
-        )}
-      </ScrollView>
+            </>
+          )}
+        </ScrollView>
+      </View>
 
       <View style={styles.saveDock}>
         <View style={styles.saveDockCopy}>
@@ -613,6 +618,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     gap: 12,
+    minHeight: 0,
   },
   navRow: {
     width: '100%',
@@ -838,8 +844,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: palette.text,
   },
+  editorRegion: {
+    flex: 1,
+    minHeight: 0,
+  },
   editorScroll: {
     flex: 1,
+    minHeight: 0,
   },
   editorScrollContent: {
     gap: 14,
