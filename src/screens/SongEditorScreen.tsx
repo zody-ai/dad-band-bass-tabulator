@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Circle, Svg, Text as SvgText } from 'react-native-svg';
 
@@ -81,6 +81,8 @@ const STRING_COUNT_OPTIONS = [4, 5];
 const AUTHOR_COMMENT_MAX = 200;
 
 export function SongEditorScreen({ navigation, route }: Props) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 760;
   const { songId, isNew = false } = route.params;
   const { capabilities } = useSubscription();
   const { showUpgradePrompt } = useUpgradePrompt();
@@ -359,8 +361,52 @@ export function SongEditorScreen({ navigation, route }: Props) {
           ? 'Unsaved changes'
           : 'All changes saved';
 
+  const editorBody = isNewEmpty ? (
+    <View style={styles.newSongStart}>
+      <Text style={styles.newSongStartText}>
+        Configure your strings, tuning, and beats per bar above, then start writing.
+      </Text>
+      <PrimaryButton
+        label="Start Writing"
+        onPress={handleStartEditing}
+      />
+    </View>
+  ) : (
+    <>
+      {lockMetadata ? (
+        <Text style={styles.lockedMetaText}>
+          Title, artist, key, and tuning are locked while you own this song in the community. Republish after editing to push changes, or release it to edit freely.
+        </Text>
+      ) : null}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Tab Editor</Text>
+        <Text style={styles.sectionMeta}>
+          Last updated {formatUpdatedAt(song.updatedAt)}
+        </Text>
+      </View>
+
+      <SectionEditorCard
+        key={chart.id}
+        section={chart}
+        index={0}
+        isFirst
+        isLast
+        showSectionControls={false}
+        saveSignal={saveSignal}
+        onChange={handleChartChange}
+        onMoveUp={() => {}}
+        onMoveDown={() => {}}
+        onDelete={() => {}}
+      />
+    </>
+  );
+
   return (
-    <ScreenContainer scroll={false} contentStyle={styles.screen}>
+    <ScreenContainer
+      scroll={isCompact}
+      contentStyle={isCompact ? styles.screenMobile : styles.screen}
+    >
       <View style={styles.navRow}>
         <AppSectionNav
           current="Library"
@@ -374,7 +420,7 @@ export function SongEditorScreen({ navigation, route }: Props) {
         />
       </View>
 
-      {Platform.OS === 'web' && (
+      {!isCompact && (
         <View style={styles.nameplate}>
           <View style={styles.nameplateInner}>
             <View style={styles.nameplateText}>
@@ -540,59 +586,24 @@ export function SongEditorScreen({ navigation, route }: Props) {
         />
       </View>
 
-      <View style={styles.editorRegion}>
-        <ScrollView
-          style={styles.editorScroll}
-          contentContainerStyle={styles.editorScrollContent}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          alwaysBounceVertical
-          showsVerticalScrollIndicator
-        >
-          {isNewEmpty ? (
-            <>
-              <View style={styles.newSongStart}>
-                <Text style={styles.newSongStartText}>
-                  Configure your strings, tuning, and beats per bar above, then start writing.
-                </Text>
-                <PrimaryButton
-                  label="Start Writing"
-                  onPress={handleStartEditing}
-                />
-              </View>
-            </>
-          ) : (
-            <>
-              {lockMetadata ? (
-                <Text style={styles.lockedMetaText}>
-                  Title, artist, key, and tuning are locked while you own this song in the community. Republish after editing to push changes, or release it to edit freely.
-                </Text>
-              ) : null}
-
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Tab Editor</Text>
-                <Text style={styles.sectionMeta}>
-                  Last updated {formatUpdatedAt(song.updatedAt)}
-                </Text>
-              </View>
-
-              <SectionEditorCard
-                key={chart.id}
-                section={chart}
-                index={0}
-                isFirst
-                isLast
-                showSectionControls={false}
-                saveSignal={saveSignal}
-                onChange={handleChartChange}
-                onMoveUp={() => {}}
-                onMoveDown={() => {}}
-                onDelete={() => {}}
-              />
-            </>
-          )}
-        </ScrollView>
-      </View>
+      {isCompact ? (
+        <View style={styles.editorRegionMobile}>
+          {editorBody}
+        </View>
+      ) : (
+        <View style={styles.editorRegion}>
+          <ScrollView
+            style={styles.editorScroll}
+            contentContainerStyle={styles.editorScrollContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            alwaysBounceVertical
+            showsVerticalScrollIndicator
+          >
+            {editorBody}
+          </ScrollView>
+        </View>
+      )}
 
       <View style={styles.saveDock}>
         <View style={styles.saveDockCopy}>
@@ -622,6 +633,9 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
     minHeight: 0,
+  },
+  screenMobile: {
+    gap: 12,
   },
   navRow: {
     width: '100%',
@@ -849,7 +863,11 @@ const styles = StyleSheet.create({
     color: palette.text,
   },
   authorNoteInputNative: {
-    height: 72,
+    height: 90,
+  },
+  editorRegionMobile: {
+    paddingBottom: 8,
+    gap: 14,
   },
   editorRegion: {
     flex: 1,
