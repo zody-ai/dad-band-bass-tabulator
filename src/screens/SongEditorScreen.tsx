@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Circle, Svg, Text as SvgText } from 'react-native-svg';
 
@@ -527,8 +527,9 @@ export function SongEditorScreen({ navigation, route }: Props) {
         <TextInput
           value={editorSong.authorComment ?? ''}
           onChangeText={(value) => handleFieldChange('authorComment', value.slice(0, AUTHOR_COMMENT_MAX))}
-          style={styles.authorNoteInput}
+          style={[styles.authorNoteInput, Platform.OS !== 'web' && styles.authorNoteInputNative]}
           multiline
+          scrollEnabled={Platform.OS !== 'web'}
           textAlignVertical="top"
           placeholder="Add context for this chart (feel, arrangement, cues, etc.)"
           placeholderTextColor={palette.textMuted}
@@ -822,6 +823,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     padding: 10,
     gap: 6,
+    flexShrink: 0,
   },
   authorNoteHeader: {
     flexDirection: 'row',
@@ -843,6 +845,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     color: palette.text,
+  },
+  authorNoteInputNative: {
+    height: 90,
   },
   editorRegion: {
     flex: 1,
