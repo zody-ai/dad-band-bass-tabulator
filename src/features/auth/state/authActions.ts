@@ -18,6 +18,10 @@ const isValidPassword = (value: string): boolean => value.length >= 8 && value.l
 
 export const createAuthActions = ({ api, dispatch, getState }: ActionDeps) => {
   let authFlowVersion = 0;
+  const resendVerificationInflight = new Set<string>();
+  const resendVerificationLastSentAt = new Map<string, number>();
+  const registerVerificationLastSentAt = new Map<string, number>();
+  const verificationCooldownMs = 30_000;
 
   const bumpAuthFlowVersion = () => {
     authFlowVersion += 1;
@@ -201,12 +205,21 @@ export const createAuthActions = ({ api, dispatch, getState }: ActionDeps) => {
     dispatch({ type: 'setLoading', loadingAction: 'register' });
 
     try {
+      const now = Date.now();
+      const lastSentAt = registerVerificationLastSentAt.get(email) ?? 0;
+      if (lastSentAt > 0 && now - lastSentAt < verificationCooldownMs) {
+        const seconds = Math.ceil((verificationCooldownMs - (now - lastSentAt)) / 1000);
+        setInfo(`Verification email already sent. Try again in ${seconds}s.`);
+        return { email, maskedEmail: email };
+      }
+
       const response = await requireApi().register({
         email,
         password,
         handle,
         avatarUrl: avatarUrl || undefined,
       });
+      registerVerificationLastSentAt.set(email, Date.now());
       logClientEvent('info', 'auth.register_succeeded', {
         handle,
       });
@@ -234,10 +247,24 @@ export const createAuthActions = ({ api, dispatch, getState }: ActionDeps) => {
       return;
     }
 
+    if (resendVerificationInflight.has(email)) {
+      return;
+    }
+
+    const now = Date.now();
+    const lastSentAt = resendVerificationLastSentAt.get(email) ?? 0;
+    if (lastSentAt > 0 && now - lastSentAt < verificationCooldownMs) {
+      const seconds = Math.ceil((verificationCooldownMs - (now - lastSentAt)) / 1000);
+      setInfo(`Verification email already sent. Try again in ${seconds}s.`);
+      return;
+    }
+
     dispatch({ type: 'setLoading', loadingAction: 'resendVerification' });
+    resendVerificationInflight.add(email);
 
     try {
       await requireApi().resendVerification({ email });
+      resendVerificationLastSentAt.set(email, Date.now());
       setInfo(`A new code has been sent to ${email}.`);
     } catch (error) {
       logClientEvent('warn', 'auth.resend_verification_failed', {
@@ -245,6 +272,7 @@ export const createAuthActions = ({ api, dispatch, getState }: ActionDeps) => {
       });
       setError(toAuthErrorMessage('resendVerification', error));
     } finally {
+      resendVerificationInflight.delete(email);
       dispatch({ type: 'setLoading', loadingAction: null });
     }
   };
