@@ -267,6 +267,10 @@ export function ImportScreen({ navigation }: Props) {
   const { showUpgradePrompt } = useUpgradePrompt();
   const { authState } = useAuth();
   const currentUserId = authState.type === 'AUTHENTICATED' ? authState.user.userId : null;
+  const currentUserLegacyId = authState.type === 'AUTHENTICATED' ? authState.user.id : null;
+  const isOwnedBySignedInUser = (ownerUserId?: string | null) =>
+    Boolean(ownerUserId) &&
+    (ownerUserId === currentUserId || ownerUserId === currentUserLegacyId);
   const currentUserDisplayName = authState.type === 'AUTHENTICATED' ? authState.user.displayName : null;
   const { songs, importSongFromDto } = useBassTab();
   const importedPublishedSongIds = useMemo(
@@ -296,7 +300,7 @@ export function ImportScreen({ navigation }: Props) {
 
     const afterOwnership = communityCatalog.filter((song) => {
       if (ownershipFilter === 'MINE') {
-        return song.ownershipStatus === 'ACTIVE' && Boolean(currentUserId) && song.author?.userId === currentUserId;
+        return song.ownershipStatus === 'ACTIVE' && isOwnedBySignedInUser(song.author?.userId);
       }
       if (ownershipFilter === 'UNCLAIMED') {
         return song.ownershipStatus === 'ORPHANED';
@@ -322,7 +326,7 @@ export function ImportScreen({ navigation }: Props) {
       );
     }
     return afterSearch;
-  }, [communityCatalog, ownershipFilter, currentUserId, query, sortBy]);
+  }, [communityCatalog, ownershipFilter, currentUserId, currentUserLegacyId, query, sortBy]);
 
   const syncSavedCommunitySongs = useCallback(
     (savedSongs: Array<{ publishedSongId: string }>, catalog: CommunitySongListItem[]) => {
@@ -627,7 +631,7 @@ export function ImportScreen({ navigation }: Props) {
       return;
     }
 
-    if (currentUserId && selectedSong.author?.userId === currentUserId) {
+    if (isOwnedBySignedInUser(selectedSong.author?.userId)) {
       setVoteBlockedSongTitle(selectedSong.title);
       return;
     }
@@ -890,9 +894,7 @@ export function ImportScreen({ navigation }: Props) {
           const isOrphaned = song.ownershipStatus === 'ORPHANED';
           const isOwner =
             !isOrphaned &&
-            Boolean(currentUserId) &&
-            Boolean(song.author?.userId) &&
-            song.author?.userId === currentUserId;
+            isOwnedBySignedInUser(song.author?.userId);
           const canAdopt = isOrphaned && tier === 'PRO';
 
           return (

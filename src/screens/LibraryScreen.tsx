@@ -85,6 +85,10 @@ export function LibraryScreen({ navigation }: Props) {
   const { showUpgradePrompt } = useUpgradePrompt();
   const { authState } = useAuth();
   const currentUserId = authState.type === 'AUTHENTICATED' ? authState.user.userId : null;
+  const currentUserLegacyId = authState.type === 'AUTHENTICATED' ? authState.user.id : null;
+  const isOwnedBySignedInUser = (ownerUserId?: string | null) =>
+    Boolean(ownerUserId) &&
+    (ownerUserId === currentUserId || ownerUserId === currentUserLegacyId);
   const {
     songs,
     createSong,
@@ -440,7 +444,7 @@ export function LibraryScreen({ navigation }: Props) {
             Boolean(publishedInfo?.publishedSongId) &&
             (publishedInfo?.ownershipStatus === 'ORPHANED' ||
               (publishedInfo?.ownerUserId != null &&
-                publishedInfo?.ownerUserId !== currentUserId));
+                !isOwnedBySignedInUser(publishedInfo.ownerUserId)));
 
           return (
             <LibrarySongCard

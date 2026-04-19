@@ -112,6 +112,10 @@ export function SongEditorScreen({ navigation, route }: Props) {
   const { lookup: publishedLookup } = usePublishedSongLookup(backendApi);
   const { authState } = useAuth();
   const currentUserId = authState.type === 'AUTHENTICATED' ? authState.user.userId : null;
+  const currentUserLegacyId = authState.type === 'AUTHENTICATED' ? authState.user.id : null;
+  const isOwnedBySignedInUser = (ownerUserId?: string | null) =>
+    Boolean(ownerUserId) &&
+    (ownerUserId === currentUserId || ownerUserId === currentUserLegacyId);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [hasSavedOnce, setHasSavedOnce] = useState(!isNew);
   const [draftSong, setDraftSong] = useState<Song | null>(null);
@@ -180,8 +184,7 @@ export function SongEditorScreen({ navigation, route }: Props) {
   const lockMetadata =
     Boolean(publishedInfo) &&
     publishedInfo?.ownershipStatus !== 'ORPHANED' &&
-    currentUserId != null &&
-    publishedInfo?.ownerUserId === currentUserId;
+    isOwnedBySignedInUser(publishedInfo?.ownerUserId);
   const stringCountOptions = useMemo(() => {
     const options = [...STRING_COUNT_OPTIONS];
     const current = editorSong?.stringCount;
