@@ -450,9 +450,12 @@ const normalizeSubscriptionStatus = (status: unknown): SubscriptionStatusDto | n
   return null;
 };
 
+const UNLIMITED_SENTINEL = 2147483647;
+
 const coerceNullableNumber = (value: unknown, fallback: number | null): number | null => {
   if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : fallback;
+    if (!Number.isFinite(value)) return fallback;
+    return value === UNLIMITED_SENTINEL ? null : value;
   }
 
   return value === null ? null : fallback;
