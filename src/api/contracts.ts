@@ -1,4 +1,5 @@
 import { DEFAULT_SUBSCRIPTION_CAPABILITIES } from '../constants/subscription';
+import { createId } from '../utils/ids';
 import { appLog } from '../utils/logging';
 
 export interface SongChartCellDto {
@@ -1048,9 +1049,7 @@ const normalizeSongChartBarDto = (
     return null;
   }
 
-  if (typeof value.id !== 'string') {
-    return null;
-  }
+  const barId = typeof value.id === 'string' ? value.id : createId('bar');
 
   const note = isNullableString(value.note) ? value.note : null;
   const hasEvents = Array.isArray(value.events);
@@ -1086,7 +1085,7 @@ const normalizeSongChartBarDto = (
     }
 
     return {
-      id: value.id,
+      id: barId,
       type: 'INSTRUCTION',
       note,
       instruction: {
@@ -1103,7 +1102,7 @@ const normalizeSongChartBarDto = (
   }
 
   return {
-    id: value.id,
+    id: barId,
     type: 'PLAYABLE',
     note,
     events: normalizedEvents,
@@ -1114,16 +1113,17 @@ const normalizeSongChartRowDto = (
   value: unknown,
   stringNames: string[],
 ): SongChartRowDto | null => {
-  if (!isRecord(value) || typeof value.id !== 'string') {
+  if (!isRecord(value)) {
     return null;
   }
+  const rowId = typeof value.id === 'string' ? value.id : createId('row');
 
   const bars = Array.isArray(value.bars)
     ? (value.bars.map((bar) => normalizeSongChartBarDto(bar, stringNames)).filter(Boolean) as SongChartBarDto[])
     : [];
 
   return {
-    id: value.id,
+    id: rowId,
     label: isNullableString(value.label) ? value.label : null,
     beforeText: isNullableString(value.beforeText) ? value.beforeText : null,
     afterText: isNullableString(value.afterText) ? value.afterText : null,
