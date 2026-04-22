@@ -14,6 +14,12 @@ import {
 } from './contracts';
 
 const EMPTY_SEGMENT = '--';
+const LEGACY_INSTRUCTION_NOTE_PREFIX = '[[BTI1]]';
+
+type LegacyInstructionPayload = {
+  text: string;
+  note?: string;
+};
 
 const toNullableText = (value: string | null | undefined): string | null => {
   if (typeof value !== 'string') {
@@ -152,23 +158,57 @@ const toInstructionDto = (bar: SongBar): SongChartInstructionDto | null => {
   }
 
   return {
-    ...(bar.instruction as Record<string, unknown>),
     kind: 'TEXT',
     text: bar.instruction.text,
   };
+};
+
+const encodeLegacyInstructionPayload = (payload: LegacyInstructionPayload): string =>
+  `${LEGACY_INSTRUCTION_NOTE_PREFIX}${JSON.stringify(payload)}`;
+
+const decodeLegacyInstructionPayload = (note: string | null | undefined): LegacyInstructionPayload | null => {
+  if (typeof note !== 'string' || !note.startsWith(LEGACY_INSTRUCTION_NOTE_PREFIX)) {
+    return null;
+  }
+
+  const raw = note.slice(LEGACY_INSTRUCTION_NOTE_PREFIX.length);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    const record = parsed as Record<string, unknown>;
+    const text = typeof record.text === 'string' ? record.text : '';
+    const noteValue = typeof record.note === 'string' ? record.note : undefined;
+    return { text, ...(noteValue !== undefined ? { note: noteValue } : {}) };
+  } catch (_error) {
+    return null;
+  }
 };
 
 const toChartBarDto = (stringNames: string[], bar: SongBar): SongChartBarDto => {
   const id = typeof bar.id === 'string' ? bar.id : createId('bar');
 
   if (isInstructionBar(bar)) {
-    const instruction = toInstructionDto(bar);
+    const instruction = toInstructionDto(bar) ?? { kind: 'TEXT', text: '' };
+    const legacyCells: Record<string, string[]> = Object.fromEntries(
+      stringNames.map((stringName) => [stringName, []]),
+    );
 
+    // Compatibility mode for legacy backend chart validators that only accept event-backed bars.
     return {
       id,
-      type: 'INSTRUCTION',
-      note: toNullableText(bar.note),
-      instruction: instruction ?? { kind: 'TEXT', text: '' },
+      type: 'PLAYABLE',
+      note: encodeLegacyInstructionPayload({
+        text: instruction.text,
+        ...(toNullableText(bar.note) ? { note: toNullableText(bar.note) ?? undefined } : {}),
+      }),
+      events: toChartEventFromLegacyCells(stringNames, legacyCells),
     };
   }
 
@@ -231,23 +271,39 @@ const fromSongChartRowDto = (
             },
             cells: Object.fromEntries(stringNames.map((stringName) => [stringName, []])),
           }
-        : {
-            id: bar.id,
-            type: 'PLAYABLE',
-            note: row.bars.length > 0 && bar.note !== null ? bar.note : undefined,
-            events: (bar.events ?? []).map((event) => ({
-              id: event.id,
-              order: event.order,
-              timingText: event.timingText ?? undefined,
-              beatStart: event.beatStart ?? undefined,
-              beatEnd: event.beatEnd ?? undefined,
-              pulseLabels: [...event.pulseLabels],
-              cells: Object.fromEntries(
-                stringNames.map((stringName) => [stringName, [...(event.cells[stringName] ?? [])]]),
-              ),
-            })),
-            cells: buildLegacyCellsFromEvents(stringNames, bar.events ?? []),
-          },
+        : (() => {
+            const decodedInstruction = decodeLegacyInstructionPayload(bar.note);
+            if (decodedInstruction) {
+              return {
+                id: bar.id,
+                type: 'INSTRUCTION' as const,
+                note: decodedInstruction.note,
+                instruction: {
+                  kind: 'TEXT' as const,
+                  text: decodedInstruction.text,
+                },
+                cells: Object.fromEntries(stringNames.map((stringName) => [stringName, []])),
+              };
+            }
+
+            return {
+              id: bar.id,
+              type: 'PLAYABLE' as const,
+              note: row.bars.length > 0 && bar.note !== null ? bar.note : undefined,
+              events: (bar.events ?? []).map((event) => ({
+                id: event.id,
+                order: event.order,
+                timingText: event.timingText ?? undefined,
+                beatStart: event.beatStart ?? undefined,
+                beatEnd: event.beatEnd ?? undefined,
+                pulseLabels: [...event.pulseLabels],
+                cells: Object.fromEntries(
+                  stringNames.map((stringName) => [stringName, [...(event.cells[stringName] ?? [])]]),
+                ),
+              })),
+              cells: buildLegacyCellsFromEvents(stringNames, bar.events ?? []),
+            };
+          })(),
       stringNames,
     )),
   })),
