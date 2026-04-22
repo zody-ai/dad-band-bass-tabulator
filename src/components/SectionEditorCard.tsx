@@ -77,6 +77,11 @@ const PREVIEW_RENDER_MODES: TabPreviewRenderMode[] = ['ascii', 'svg'];
 const normalizeBarNotes = (barCount: number, barNotes?: string[]): string[] =>
   Array.from({ length: barCount }, (_, index) => barNotes?.[index] ?? '');
 
+interface CopiedBarPayload {
+  bar: SongBar;
+  note: string;
+}
+
 const getBeatPulseLabels = (beat: EditorBeat): string[] =>
   buildEditorPulseLabels(beat.beatNumber, beat.split);
 
@@ -274,7 +279,7 @@ export function SectionEditorCard({
     bars: SongBar[];
     annotation: TabRowAnnotation;
   } | null>(null);
-  const [copiedBar, setCopiedBar] = useState<SongBar | null>(null);
+  const [copiedBar, setCopiedBar] = useState<CopiedBarPayload | null>(null);
   const [renderMode, setRenderMode] = useState<TabPreviewRenderMode>('ascii');
   const [rowEditSnapshot, setRowEditSnapshot] = useState<{
     tab: string;
@@ -1110,8 +1115,8 @@ interface RowEditorProps {
     slotIndex: number,
     currentValue: string,
   ) => void;
-  copiedBar: SongBar | null;
-  onCopyBar: (bar: SongBar | null) => void;
+  copiedBar: CopiedBarPayload | null;
+  onCopyBar: (bar: CopiedBarPayload | null) => void;
 }
 
 function RowEditor({
@@ -1355,7 +1360,7 @@ function RowEditor({
     onChartChange(nextBars, nextRowAnnotations, nextRowBarCounts);
   };
 
-  const replaceBar = (barIndex: number, nextBar: SongBar) => {
+  const replaceBar = (barIndex: number, nextBar: SongBar, nextBarNote?: string) => {
     const nextBars = bars.map((bar, currentBarIndex) => {
       if (currentBarIndex !== barIndex) {
         return bar;
@@ -1366,6 +1371,21 @@ function RowEditor({
         id: bar.id,
       };
     });
+
+    if (nextBarNote !== undefined) {
+      const rowBarIndex = barIndex - row.startBarIndex;
+      if (rowBarIndex >= 0 && rowBarIndex < row.barCount) {
+        const nextRowAnnotations = [...rowAnnotations];
+        const nextBarNotes = normalizeBarNotes(row.barCount, row.annotation.barNotes);
+        nextBarNotes[rowBarIndex] = nextBarNote;
+        nextRowAnnotations[row.rowIndex] = {
+          ...row.annotation,
+          barNotes: nextBarNotes,
+        };
+        onChartChange(nextBars, nextRowAnnotations, rowBarCounts);
+        return;
+      }
+    }
 
     onBarsChange(nextBars);
   };
@@ -1745,7 +1765,12 @@ function RowEditor({
         />
         <PrimaryButton
           label={useMobileCellEditor ? 'Copy' : '⎘ Copy'}
-          onPress={() => onCopyBar(cloneBarForClipboard(selectedBar))}
+          onPress={() =>
+            onCopyBar({
+              bar: cloneBarForClipboard(selectedBar),
+              note: row.annotation.barNotes[activeBarIndex] ?? selectedBar.note ?? '',
+            })
+          }
           variant="ghost"
           size="compact"
           style={[
@@ -1760,7 +1785,7 @@ function RowEditor({
               return;
             }
 
-            replaceBar(selectedGlobalBarIndex, copiedBar);
+            replaceBar(selectedGlobalBarIndex, copiedBar.bar, copiedBar.note);
           }}
           variant="ghost"
           disabled={!copiedBar}
