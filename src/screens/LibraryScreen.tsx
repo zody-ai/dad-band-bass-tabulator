@@ -5,7 +5,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { createBassTabApiFromEnv } from '../api';
+import { createBassTabApiFromEnv, toSongChartDto } from '../api';
 import { EmptyState } from '../components/EmptyState';
 import { AppSectionNav } from '../components/AppSectionNav';
 import { LibrarySongCard } from '../components/LibrarySongCard';
@@ -243,6 +243,9 @@ export function LibraryScreen({ navigation }: Props) {
         deleteSong(song.id);
         setStatusMessage(`"${song.title}" released — it's now free to be claimed by the community.`);
       } else {
+        await backendApi.replaceSongChart(song.id, {
+          chart: toSongChartDto(song),
+        });
         await backendApi.publishSong(song.id);
         const nextLookup = await refreshPublishedLookup();
         setStatusMessage(
@@ -280,6 +283,9 @@ export function LibraryScreen({ navigation }: Props) {
         return;
       }
 
+      await backendApi.replaceSongChart(song.id, {
+        chart: toSongChartDto(song),
+      });
       await backendApi.republishCommunitySong(publishedSongId, song.id);
       await refreshPublishedLookup();
       setStatusMessage(`"${song.title}" republished to Community.`);
