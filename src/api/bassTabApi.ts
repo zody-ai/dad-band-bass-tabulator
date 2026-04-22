@@ -57,7 +57,7 @@ export interface BassTabApi {
   aiGenerateSong(payload: AiGenerateSongRequestDto): Promise<SongDto>;
   updateSongMetadata(songId: string, payload: UpdateSongMetadataRequestDto): Promise<SongMetadataDto>;
   publishSong(songId: string): Promise<void>;
-  republishCommunitySong(publishedSongId: string): Promise<void>;
+  republishCommunitySong(publishedSongId: string, songId: string): Promise<void>;
   unlistPublishedSong(publishedSongId: string): Promise<void>;
   replaceSongChart(songId: string, payload: ReplaceSongChartRequestDto): Promise<SongChartDto>;
   deleteSong(songId: string): Promise<void>;
@@ -251,13 +251,13 @@ export class HttpBassTabApi implements BassTabApi {
     );
   }
 
-  async republishCommunitySong(publishedSongId: string): Promise<void> {
+  async republishCommunitySong(publishedSongId: string, songId: string): Promise<void> {
     await this.request(
       `/v1/community/${encodeURIComponent(publishedSongId)}/republish`,
       {
         method: 'POST',
         headers: jsonHeaders,
-        body: JSON.stringify({}),
+        body: JSON.stringify({ songId }),
       },
       () => undefined,
     );

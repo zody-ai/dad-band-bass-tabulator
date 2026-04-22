@@ -280,7 +280,7 @@ export function LibraryScreen({ navigation }: Props) {
         return;
       }
 
-      await backendApi.republishCommunitySong(publishedSongId);
+      await backendApi.republishCommunitySong(publishedSongId, song.id);
       await refreshPublishedLookup();
       setStatusMessage(`"${song.title}" republished to Community.`);
     } catch (error) {
